@@ -15,6 +15,17 @@
         "C:/Users/AcLs/OneDrive/Documentos/Clientes/GABAME/aura/backend"
       ],
       "port": 8000
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "C:/Users/AcLs/OneDrive/Documentos/Clientes/GABAME/aura/frontend",
+        "run",
+        "dev"
+      ],
+      "port": 3000
     }
   ]
 }

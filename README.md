@@ -4,11 +4,13 @@ Marketplace de productos de belleza y cuidado personal. Odoo es la fuente de ver
 el marketplace es un canal de venta que sincroniza catálogo/precios/stock desde Odoo y
 empuja pedidos hacia Odoo.
 
+> Sistema desarrollado por **mirmibug**.
+
 ## Estructura
 
 ```
 backend/    API FastAPI + PostgreSQL + SQLAlchemy 2.0 + Alembic
-frontend/   Next.js 14 + TypeScript + Tailwind + shadcn/ui (próximamente)
+frontend/   Next.js 14 + TypeScript + Tailwind + shadcn/ui
 ```
 
 ## Backend — puesta en marcha (Windows / PowerShell)
@@ -36,6 +38,17 @@ uvicorn app.main:app --reload
 - API: http://127.0.0.1:8000
 - Docs: http://127.0.0.1:8000/docs
 - Health: `/health` (liveness) · `/health/db` (readiness)
+
+## Frontend — puesta en marcha
+
+```powershell
+cd frontend
+npm install
+copy .env.example .env.local   # NEXT_PUBLIC_API_URL apunta al backend
+npm run dev
+```
+
+- Tienda: http://localhost:3000 (requiere el backend corriendo en :8000)
 
 ## Notas
 

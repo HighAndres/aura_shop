@@ -9,6 +9,7 @@ from app.core.config import settings
 def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.PROJECT_NAME,
+        description="Sistema desarrollado por mirmibug.",
         debug=settings.DEBUG,
         openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
         docs_url="/docs",
