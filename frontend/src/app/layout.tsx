@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import { Fraunces } from "next/font/google";
 import "./globals.css";
 
+import { CartProvider } from "@/components/cart-provider";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { cn } from "@/lib/utils";
@@ -39,11 +40,13 @@ export default function RootLayout({
       className={cn(geistSans.variable, fraunces.variable)}
     >
       <body className="flex min-h-dvh flex-col font-sans antialiased">
-        <SiteHeader />
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
-          {children}
-        </main>
-        <SiteFooter />
+        <CartProvider>
+          <SiteHeader />
+          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
+            {children}
+          </main>
+          <SiteFooter />
+        </CartProvider>
       </body>
     </html>
   );
