@@ -1,14 +1,19 @@
 from functools import lru_cache
+from pathlib import Path
+from typing import Annotated
 
 from pydantic import PostgresDsn, computed_field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+
+# Raíz de backend/, para resolver el .env sin depender del directorio actual.
+BACKEND_DIR = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
     """Configuración central de la app, leída desde variables de entorno / .env."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=BACKEND_DIR / ".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -28,7 +33,9 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "aura"
 
     # ---- CORS ----
-    BACKEND_CORS_ORIGINS: list[str] = []
+    # NoDecode: evita que pydantic-settings intente json.loads() sobre la cadena;
+    # el validador de abajo la parsea como lista separada por comas.
+    BACKEND_CORS_ORIGINS: Annotated[list[str], NoDecode] = []
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
