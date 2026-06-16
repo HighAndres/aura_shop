@@ -25,6 +25,15 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     API_V1_PREFIX: str = "/api/v1"
 
+    # ---- Seguridad / JWT ----
+    # OBLIGATORIO en producción: definir SECRET_KEY larga y secreta en el .env.
+    SECRET_KEY: str
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    # Rol asignado por defecto al registrarse en la tienda.
+    DEFAULT_USER_ROLE: str = "cliente"
+
     # ---- Base de datos ----
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
