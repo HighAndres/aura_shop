@@ -17,6 +17,10 @@ from app.models.user import Usuario
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_PREFIX}/auth/login"
 )
+# Variante que no falla si no hay token (para carrito de invitado, etc.).
+oauth2_scheme_optional = OAuth2PasswordBearer(
+    tokenUrl=f"{settings.API_V1_PREFIX}/auth/login", auto_error=False
+)
 
 _credentials_exc = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -45,6 +49,26 @@ def get_current_user(
     if user is None:
         raise _credentials_exc
     return user
+
+
+def get_current_user_optional(
+    token: str | None = Depends(oauth2_scheme_optional),
+    db: Session = Depends(get_db),
+) -> Usuario | None:
+    """Devuelve el usuario si hay un access token válido; si no, None (no falla)."""
+    if not token:
+        return None
+    try:
+        payload = decode_token(token)
+        if payload.get("type") != ACCESS_TOKEN_TYPE:
+            return None
+        sub = payload.get("sub")
+        if sub is None:
+            return None
+        user_id = uuid.UUID(sub)
+    except (jwt.PyJWTError, ValueError):
+        return None
+    return crud_user.get_by_id(db, user_id)
 
 
 def get_current_active_user(

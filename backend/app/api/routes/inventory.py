@@ -1,12 +1,14 @@
 """Endpoints de inventario (admin). Protegidos por permisos RBAC."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_permissions
+from app.core import audit
 from app.crud import inventory as crud
 from app.db.session import get_db
 from app.models.inventory import StockMovimiento, TipoMovimiento
+from app.models.user import Usuario
 from app.schemas.inventory import (
     AlmacenRead,
     MovimientoCreate,
@@ -93,10 +95,12 @@ def listar_movimientos(
     response_model=MovimientoRead,
     status_code=status.HTTP_201_CREATED,
     summary="Registrar movimiento de inventario",
-    dependencies=[Depends(require_permissions("inventario.ajustar"))],
 )
 def crear_movimiento(
-    body: MovimientoCreate, db: Session = Depends(get_db)
+    body: MovimientoCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_permissions("inventario.ajustar")),
 ) -> MovimientoRead:
     _validar_signo(body.tipo, body.cantidad)
 
@@ -128,5 +132,23 @@ def crear_movimiento(
         )
     except crud.StockInsuficienteError as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+
+    audit.registrar(
+        db,
+        actor=current_user,
+        accion="inventario.ajustar",
+        descripcion=(
+            f"{body.tipo.value} de {body.cantidad} en {body.sku} ({body.almacen})"
+        ),
+        entidad="variante",
+        entidad_id=body.sku,
+        cambios={
+            "tipo": body.tipo.value,
+            "cantidad": body.cantidad,
+            "almacen": body.almacen,
+            "referencia": body.referencia,
+        },
+        request=request,
+    )
 
     return _serialize_mov(mov)

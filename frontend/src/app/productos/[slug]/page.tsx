@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Star } from "lucide-react";
 
+import { AddToCart } from "@/components/add-to-cart";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { getProducto } from "@/lib/catalog";
 import { formatMXN } from "@/lib/format";
 
@@ -115,18 +115,13 @@ export default async function ProductoPage({ params }: PageProps) {
                         <span className="text-xs text-muted-foreground">
                           {v.disponible} disp.
                         </span>
-                        <Button size="sm" disabled>
-                          Agregar
-                        </Button>
+                        <AddToCart sku={v.sku} />
                       </div>
                     )}
                   </li>
                 );
               })}
             </ul>
-            <p className="text-xs text-muted-foreground">
-              El carrito y el checkout se habilitan en la siguiente etapa.
-            </p>
           </div>
         </div>
       </div>

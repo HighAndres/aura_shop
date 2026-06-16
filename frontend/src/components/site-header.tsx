@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ShoppingBag } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { CartButton } from "@/components/cart-button";
+import { UserMenu } from "@/components/user-menu";
 
 export function SiteHeader() {
   return (
@@ -23,17 +24,8 @@ export function SiteHeader() {
           <Button asChild variant="ghost" size="sm" className="font-medium">
             <Link href="/productos">Productos</Link>
           </Button>
-          <Button
-            asChild
-            variant="ghost"
-            size="icon"
-            aria-label="Carrito"
-            className="relative"
-          >
-            <Link href="/carrito">
-              <ShoppingBag className="size-5" />
-            </Link>
-          </Button>
+          <UserMenu />
+          <CartButton />
         </nav>
       </div>
     </header>
