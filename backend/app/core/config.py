@@ -34,6 +34,18 @@ class Settings(BaseSettings):
     # Rol asignado por defecto al registrarse en la tienda.
     DEFAULT_USER_ROLE: str = "cliente"
 
+    # ---- Tokens de un solo uso (correo) ----
+    EMAIL_VERIFY_TOKEN_EXPIRE_HOURS: int = 48
+    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 30
+    MAGIC_LINK_TOKEN_EXPIRE_MINUTES: int = 15
+
+    # ---- Correo / front ----
+    # URL del frontend para construir los enlaces de los correos.
+    FRONTEND_URL: str = "http://localhost:3000"
+    EMAIL_FROM: str = "no-reply@aura.mx"
+    # En producción se conecta SMTP real; en dev el envío se registra en consola.
+    EMAILS_ENABLED: bool = False
+
     # ---- Base de datos ----
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"

@@ -46,6 +46,7 @@ class VarianteRead(BaseModel):
     precio: Decimal
     precio_comparativo: Decimal | None = None
     activo: bool
+    disponible: int = 0
     atributos: list[ValorAtributoRead] = []
 
 

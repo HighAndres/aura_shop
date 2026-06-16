@@ -26,6 +26,8 @@ copy .env.example .env   # ajustar credenciales de PostgreSQL
 python scripts\create_db.py      # crea la base 'aura'
 alembic upgrade head             # aplica migraciones
 python scripts\seed_rbac.py      # roles y permisos base
+python scripts\seed_catalog.py   # catálogo de ejemplo
+python scripts\seed_inventory.py # almacén + stock inicial
 
 # Servidor
 uvicorn app.main:app --reload
