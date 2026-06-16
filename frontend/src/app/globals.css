@@ -2,50 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display), Georgia, serif;
+  }
+}
+
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    /* Fondo crema cálido, no blanco puro: más acogedor para una tienda de belleza */
+    --background: 24 40% 98.5%;
+    --foreground: 340 14% 16%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 340 14% 16%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 346 77% 50%;
+    --popover-foreground: 340 14% 16%;
+    /* Rosa profundo y elegante (no fucsia); blanco encima pasa contraste AA */
+    --primary: 343 62% 45%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 346 77% 50%;
-    --radius: 0.6rem;
+    /* Blush suave para chips y fondos secundarios */
+    --secondary: 345 44% 96%;
+    --secondary-foreground: 343 45% 32%;
+    --muted: 24 18% 95%;
+    --muted-foreground: 340 7% 44%;
+    --accent: 345 48% 95%;
+    --accent-foreground: 343 45% 32%;
+    --destructive: 0 72% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 340 18% 91%;
+    --input: 340 18% 91%;
+    --ring: 343 62% 45%;
+    --radius: 0.85rem;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 346 77% 50%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 346 77% 50%;
+    --background: 340 16% 8%;
+    --foreground: 24 24% 96%;
+    --card: 340 14% 11%;
+    --card-foreground: 24 24% 96%;
+    --popover: 340 14% 11%;
+    --popover-foreground: 24 24% 96%;
+    --primary: 343 70% 58%;
+    --primary-foreground: 340 30% 10%;
+    --secondary: 340 12% 18%;
+    --secondary-foreground: 24 24% 96%;
+    --muted: 340 12% 18%;
+    --muted-foreground: 340 8% 64%;
+    --accent: 340 12% 20%;
+    --accent-foreground: 24 24% 96%;
+    --destructive: 0 62% 44%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 340 12% 20%;
+    --input: 340 12% 20%;
+    --ring: 343 70% 58%;
   }
 }
 
@@ -55,5 +64,14 @@
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  /* Títulos con la tipografía editorial (font-family directo, sin @apply) */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display), Georgia, serif;
+    @apply tracking-tight;
   }
 }
