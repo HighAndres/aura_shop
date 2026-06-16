@@ -14,12 +14,14 @@ from app.models.catalog import (
     Variante,
     variante_valores,
 )
+from app.models.cart import Carrito, CarritoItem
 from app.models.inventory import (
     Almacen,
     Lote,
     StockMovimiento,
     TipoMovimiento,
 )
+from app.models.order import EstadoPedido, Pedido, PedidoItem
 from app.models.rbac import Permiso, Rol, rol_permisos, usuario_roles
 from app.models.review import Resena
 from app.models.user import Usuario
@@ -47,4 +49,11 @@ __all__ = [
     "Lote",
     "StockMovimiento",
     "TipoMovimiento",
+    # carrito
+    "Carrito",
+    "CarritoItem",
+    # pedidos
+    "Pedido",
+    "PedidoItem",
+    "EstadoPedido",
 ]
