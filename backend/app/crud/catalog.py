@@ -121,7 +121,7 @@ def serialize_list_item(p: Producto) -> ProductoListItem:
     )
 
 
-def _serialize_variante(v: Variante) -> VarianteRead:
+def _serialize_variante(v: Variante, disponible: int = 0) -> VarianteRead:
     return VarianteRead(
         id=v.id,
         sku=v.sku,
@@ -129,6 +129,7 @@ def _serialize_variante(v: Variante) -> VarianteRead:
         precio=v.precio,
         precio_comparativo=v.precio_comparativo,
         activo=v.activo,
+        disponible=disponible,
         atributos=[
             ValorAtributoRead(atributo=val.atributo.nombre, valor=val.valor)
             for val in v.valores
@@ -137,8 +138,12 @@ def _serialize_variante(v: Variante) -> VarianteRead:
 
 
 def serialize_detail(
-    p: Producto, rating_promedio: float | None, num_resenas: int
+    p: Producto,
+    rating_promedio: float | None,
+    num_resenas: int,
+    stock_por_variante: dict | None = None,
 ) -> ProductoDetail:
+    stock = stock_por_variante or {}
     return ProductoDetail(
         id=p.id,
         nombre=p.nombre,
@@ -151,7 +156,11 @@ def serialize_detail(
             CategoriaRead.model_validate(p.categoria) if p.categoria else None
         ),
         imagenes=[ImagenRead.model_validate(i) for i in p.imagenes],
-        variantes=[_serialize_variante(v) for v in p.variantes if v.activo],
+        variantes=[
+            _serialize_variante(v, stock.get(v.id, 0))
+            for v in p.variantes
+            if v.activo
+        ],
         rating_promedio=rating_promedio,
         num_resenas=num_resenas,
     )

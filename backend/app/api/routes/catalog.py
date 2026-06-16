@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.crud import catalog as crud
+from app.crud import inventory as crud_inv
 from app.db.session import get_db
 from app.schemas.catalog import (
     CategoriaRead,
@@ -72,4 +73,7 @@ def detalle_producto(slug: str, db: Session = Depends(get_db)) -> ProductoDetail
             status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado"
         )
     rating, num = crud.rating_de_producto(db, producto.id)
-    return crud.serialize_detail(producto, rating, num)
+    stock = crud_inv.disponible_por_variantes(
+        db, [v.id for v in producto.variantes]
+    )
+    return crud.serialize_detail(producto, rating, num, stock)

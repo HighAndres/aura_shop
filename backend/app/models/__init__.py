@@ -14,6 +14,12 @@ from app.models.catalog import (
     Variante,
     variante_valores,
 )
+from app.models.inventory import (
+    Almacen,
+    Lote,
+    StockMovimiento,
+    TipoMovimiento,
+)
 from app.models.rbac import Permiso, Rol, rol_permisos, usuario_roles
 from app.models.review import Resena
 from app.models.user import Usuario
@@ -36,4 +42,9 @@ __all__ = [
     "variante_valores",
     # reseñas
     "Resena",
+    # inventario
+    "Almacen",
+    "Lote",
+    "StockMovimiento",
+    "TipoMovimiento",
 ]
