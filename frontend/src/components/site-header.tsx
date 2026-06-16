@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { CartButton } from "@/components/cart-button";
+import { UserMenu } from "@/components/user-menu";
 
 export function SiteHeader() {
   return (
@@ -23,6 +24,7 @@ export function SiteHeader() {
           <Button asChild variant="ghost" size="sm" className="font-medium">
             <Link href="/productos">Productos</Link>
           </Button>
+          <UserMenu />
           <CartButton />
         </nav>
       </div>

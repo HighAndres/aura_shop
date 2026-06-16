@@ -96,3 +96,17 @@ export function checkout(payload: CheckoutPayload) {
     body: JSON.stringify(payload),
   });
 }
+
+/** Fusiona el carrito de invitado (token) en el del usuario (requiere sesión). */
+export function mergeGuestCart(token: string) {
+  return asCart(
+    request<Cart>("/cart/merge", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    }),
+  );
+}
+
+export function fetchMisPedidos() {
+  return request<Pedido[]>("/orders");
+}

@@ -69,6 +69,25 @@ export interface ProductosPage {
   offset: number;
 }
 
+// --- Usuario / auth ---
+
+export interface Usuario {
+  id: string;
+  email: string;
+  nombre_completo: string | null;
+  telefono: string | null;
+  is_active: boolean;
+  is_verified: boolean;
+  roles: string[];
+  created_at: string;
+}
+
+export interface TokenPair {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+}
+
 // --- Carrito ---
 
 export interface CartItem {
