@@ -14,6 +14,7 @@ from app.models.catalog import (
     Variante,
     variante_valores,
 )
+from app.models.audit import Auditoria
 from app.models.cart import Carrito, CarritoItem
 from app.models.inventory import (
     Almacen,
@@ -56,4 +57,6 @@ __all__ = [
     "Pedido",
     "PedidoItem",
     "EstadoPedido",
+    # auditoría
+    "Auditoria",
 ]

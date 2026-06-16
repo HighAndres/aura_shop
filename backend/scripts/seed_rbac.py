@@ -30,22 +30,35 @@ PERMISOS: dict[str, str] = {
     "pedidos.crear": "Crear pedidos",
     "pedidos.editar": "Editar pedidos",
     "pedidos.cancelar": "Cancelar pedidos",
+    "reportes.leer": "Ver reportes",
+    "bitacora.leer": "Ver la bitácora de auditoría",
+    "configuracion.gestionar": "Gestionar la configuración del sistema",
 }
 
 # Roles base del sistema y los permisos que otorgan.
 # "*" = todos los permisos (superadmin).
+# Niveles internos: superadmin > administrador > vendedor.
 ROLES: dict[str, dict] = {
     "superadmin": {
-        "descripcion": "Acceso total al sistema",
+        "descripcion": "Acceso total, incluida la bitácora y la gestión de usuarios/roles",
         "permisos": "*",
     },
-    "staff": {
-        "descripcion": "Operación de tienda: catálogo, inventario y pedidos",
+    "administrador": {
+        "descripcion": "Operación de tienda: catálogo, inventario, pedidos y reportes (sin usuarios/roles ni bitácora)",
         "permisos": [
             "usuarios.leer",
             "productos.leer", "productos.crear", "productos.editar",
             "inventario.leer", "inventario.ajustar",
             "pedidos.leer", "pedidos.editar", "pedidos.cancelar",
+            "reportes.leer",
+        ],
+    },
+    "vendedor": {
+        "descripcion": "Procesa pedidos y consulta catálogo/inventario (sin editar precios ni ajustar stock)",
+        "permisos": [
+            "productos.leer",
+            "inventario.leer",
+            "pedidos.leer", "pedidos.editar",
         ],
     },
     "cliente": {
@@ -71,7 +84,13 @@ def seed() -> None:
                 existentes[codigo] = p
         db.flush()
 
-        # 2) Roles + asignación de permisos
+        # 2) Migración de nombre: staff -> vendedor (conserva asignaciones).
+        staff = db.scalar(select(Rol).where(Rol.nombre == "staff"))
+        if staff and not db.scalar(select(Rol).where(Rol.nombre == "vendedor")):
+            staff.nombre = "vendedor"
+            db.flush()
+
+        # 3) Roles + asignación de permisos
         roles_db = {r.nombre: r for r in db.scalars(select(Rol)).all()}
         for nombre, cfg in ROLES.items():
             rol = roles_db.get(nombre)
@@ -92,7 +111,7 @@ def seed() -> None:
         db.commit()
         print(
             f"Seed OK: {len(existentes)} permisos, {len(roles_db)} roles "
-            "(superadmin, staff, cliente, invitado)."
+            "(superadmin, administrador, vendedor, cliente, invitado)."
         )
     finally:
         db.close()
