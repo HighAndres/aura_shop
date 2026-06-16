@@ -10,51 +10,51 @@
 
 @layer base {
   :root {
-    /* Fondo crema cálido, no blanco puro: más acogedor para una tienda de belleza */
-    --background: 24 40% 98.5%;
-    --foreground: 340 14% 16%;
+    /* Fondo casi blanco con un velo verde azulado, limpio y fresco */
+    --background: 185 30% 98.5%;
+    --foreground: 195 28% 14%;
     --card: 0 0% 100%;
-    --card-foreground: 340 14% 16%;
+    --card-foreground: 195 28% 14%;
     --popover: 0 0% 100%;
-    --popover-foreground: 340 14% 16%;
-    /* Rosa profundo y elegante (no fucsia); blanco encima pasa contraste AA */
-    --primary: 343 62% 45%;
+    --popover-foreground: 195 28% 14%;
+    /* Verde azulado (teal) profundo; blanco encima pasa contraste AA */
+    --primary: 185 66% 32%;
     --primary-foreground: 0 0% 100%;
-    /* Blush suave para chips y fondos secundarios */
-    --secondary: 345 44% 96%;
-    --secondary-foreground: 343 45% 32%;
-    --muted: 24 18% 95%;
-    --muted-foreground: 340 7% 44%;
-    --accent: 345 48% 95%;
-    --accent-foreground: 343 45% 32%;
+    /* Teal muy claro para chips y fondos secundarios */
+    --secondary: 185 42% 94%;
+    --secondary-foreground: 188 55% 22%;
+    --muted: 190 22% 95%;
+    --muted-foreground: 195 12% 42%;
+    --accent: 185 46% 92%;
+    --accent-foreground: 188 55% 22%;
     --destructive: 0 72% 48%;
     --destructive-foreground: 0 0% 100%;
-    --border: 340 18% 91%;
-    --input: 340 18% 91%;
-    --ring: 343 62% 45%;
+    --border: 188 24% 89%;
+    --input: 188 24% 89%;
+    --ring: 185 66% 32%;
     --radius: 0.85rem;
   }
 
   .dark {
-    --background: 340 16% 8%;
-    --foreground: 24 24% 96%;
-    --card: 340 14% 11%;
-    --card-foreground: 24 24% 96%;
-    --popover: 340 14% 11%;
-    --popover-foreground: 24 24% 96%;
-    --primary: 343 70% 58%;
-    --primary-foreground: 340 30% 10%;
-    --secondary: 340 12% 18%;
-    --secondary-foreground: 24 24% 96%;
-    --muted: 340 12% 18%;
-    --muted-foreground: 340 8% 64%;
-    --accent: 340 12% 20%;
-    --accent-foreground: 24 24% 96%;
+    --background: 195 30% 8%;
+    --foreground: 185 20% 96%;
+    --card: 195 26% 11%;
+    --card-foreground: 185 20% 96%;
+    --popover: 195 26% 11%;
+    --popover-foreground: 185 20% 96%;
+    --primary: 184 60% 44%;
+    --primary-foreground: 195 35% 8%;
+    --secondary: 195 18% 18%;
+    --secondary-foreground: 185 20% 96%;
+    --muted: 195 18% 18%;
+    --muted-foreground: 190 12% 64%;
+    --accent: 195 18% 20%;
+    --accent-foreground: 185 20% 96%;
     --destructive: 0 62% 44%;
     --destructive-foreground: 0 0% 100%;
-    --border: 340 12% 20%;
-    --input: 340 12% 20%;
-    --ring: 343 70% 58%;
+    --border: 195 18% 20%;
+    --input: 195 18% 20%;
+    --ring: 184 60% 44%;
   }
 }
 
