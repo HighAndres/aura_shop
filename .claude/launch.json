@@ -1,0 +1,20 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "backend-fastapi",
+      "runtimeExecutable": "C:/Users/AcLs/OneDrive/Documentos/Clientes/GABAME/aura/backend/.venv/Scripts/python.exe",
+      "runtimeArgs": [
+        "-m",
+        "uvicorn",
+        "app.main:app",
+        "--reload",
+        "--port",
+        "8000",
+        "--app-dir",
+        "C:/Users/AcLs/OneDrive/Documentos/Clientes/GABAME/aura/backend"
+      ],
+      "port": 8000
+    }
+  ]
+}
