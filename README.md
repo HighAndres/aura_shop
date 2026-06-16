@@ -4,6 +4,8 @@ Marketplace de productos de belleza y cuidado personal. Odoo es la fuente de ver
 el marketplace es un canal de venta que sincroniza catálogo/precios/stock desde Odoo y
 empuja pedidos hacia Odoo.
 
+> Sistema desarrollado por **mirmibug**.
+
 ## Estructura
 
 ```

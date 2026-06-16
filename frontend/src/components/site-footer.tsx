@@ -57,8 +57,9 @@ export function SiteFooter() {
       </div>
 
       <div className="border-t py-4">
-        <p className="mx-auto max-w-6xl px-4 text-xs text-muted-foreground sm:px-6">
-          © {new Date().getFullYear()} Aura · Hecho con cariño en México
+        <p className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 text-xs text-muted-foreground sm:px-6">
+          <span>© {new Date().getFullYear()} Aura · Hecho con cariño en México</span>
+          <span>Desarrollado por mirmibug</span>
         </p>
       </div>
     </footer>
