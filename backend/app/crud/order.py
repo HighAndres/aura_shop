@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.crud import inventory as crud_inv
 from app.models.cart import Carrito
+from app.models.catalog import Variante
 from app.models.inventory import StockMovimiento, TipoMovimiento
 from app.models.order import Pedido, PedidoItem
 from app.schemas.order import CheckoutIn
@@ -66,6 +67,14 @@ def checkout(
     email = data.email or email_cuenta
     if not email:
         raise CheckoutError("Se requiere un correo para el pedido")
+
+    # Candado anti-sobreventa: bloqueo pesimista de las variantes del carrito.
+    # Serializa checkouts simultáneos de los mismos SKU hasta el commit, para
+    # que la validación de stock y el descuento sean consistentes.
+    variante_ids = [it.variante_id for it in cart.items]
+    db.execute(
+        select(Variante.id).where(Variante.id.in_(variante_ids)).with_for_update()
+    )
 
     # 1) Validar stock de todas las líneas antes de tocar nada.
     faltantes: list[tuple[str, int, int]] = []

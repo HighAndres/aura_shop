@@ -8,13 +8,14 @@ desarrollo se registra en consola (ver app.core.email).
 import uuid
 
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user
 from app.core import email as email_service
 from app.core.config import settings
+from app.core.limiter import limiter
 from app.core.security import (
     EMAIL_VERIFY_TOKEN_TYPE,
     MAGIC_LINK_TOKEN_TYPE,
@@ -58,8 +59,12 @@ def _tokens_for(user_id: uuid.UUID) -> Token:
 
 
 def _dev_token(token: str) -> str | None:
-    """Expone el token en la respuesta solo en desarrollo, para pruebas."""
-    return token if settings.DEBUG else None
+    """Expone el token en la respuesta SOLO en desarrollo, para pruebas.
+
+    Atado a ENVIRONMENT (no a DEBUG) para que un DEBUG mal puesto en producción
+    no filtre tokens de verificación/reset.
+    """
+    return token if settings.ENVIRONMENT == "development" else None
 
 
 # --- Registro / login / refresh ---
@@ -70,7 +75,10 @@ def _dev_token(token: str) -> str | None:
     status_code=status.HTTP_201_CREATED,
     summary="Registrar usuario con email y contraseña",
 )
-def register(data: UserCreate, db: Session = Depends(get_db)) -> UserRead:
+@limiter.limit("5/minute")
+def register(
+    data: UserCreate, request: Request, db: Session = Depends(get_db)
+) -> UserRead:
     if crud_user.get_by_email(db, data.email):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -85,7 +93,9 @@ def register(data: UserCreate, db: Session = Depends(get_db)) -> UserRead:
 
 
 @router.post("/login", response_model=Token, summary="Iniciar sesión")
+@limiter.limit("10/minute")
 def login(
+    request: Request,
     form: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ) -> Token:
@@ -174,8 +184,9 @@ def resend_verification(
     response_model=MessageResponse,
     summary="Solicitar restablecer contraseña",
 )
+@limiter.limit("5/minute")
 def forgot_password(
-    body: EmailRequest, db: Session = Depends(get_db)
+    body: EmailRequest, request: Request, db: Session = Depends(get_db)
 ) -> MessageResponse:
     user = crud_user.get_by_email(db, body.email)
     dev = None
@@ -242,8 +253,9 @@ def change_password(
     response_model=MessageResponse,
     summary="Solicitar enlace mágico de acceso",
 )
+@limiter.limit("5/minute")
 def request_magic_link(
-    body: EmailRequest, db: Session = Depends(get_db)
+    body: EmailRequest, request: Request, db: Session = Depends(get_db)
 ) -> MessageResponse:
     user = crud_user.get_by_email(db, body.email)
     dev = None
