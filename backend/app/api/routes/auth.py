@@ -8,7 +8,7 @@ desarrollo se registra en consola (ver app.core.email).
 import uuid
 
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -26,9 +26,11 @@ from app.core.security import (
     create_magic_link_token,
     create_password_reset_token,
     create_refresh_token,
+    decode_token,
     decode_token_of_type,
     verify_password,
 )
+from app.crud import auth_token as crud_token
 from app.crud import user as crud_user
 from app.db.session import get_db
 from app.models.user import Usuario
@@ -39,7 +41,7 @@ from app.schemas.auth import (
     ResetPasswordRequest,
     TokenRequest,
 )
-from app.schemas.token import RefreshRequest, Token
+from app.schemas.token import AccessToken
 from app.schemas.user import UserCreate, UserRead
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -49,13 +51,36 @@ _GENERIC_EMAIL_MSG = (
     "Si el correo está registrado, te enviamos un mensaje con las instrucciones."
 )
 
+# Cookie del refresh token: httpOnly, alcance solo a /auth, Secure en prod.
+REFRESH_COOKIE = "aura_refresh"
+_COOKIE_PATH = f"{settings.API_V1_PREFIX}/auth"
 
-def _tokens_for(user_id: uuid.UUID) -> Token:
-    sub = str(user_id)
-    return Token(
-        access_token=create_access_token(sub),
-        refresh_token=create_refresh_token(sub),
+
+def _set_refresh_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        key=REFRESH_COOKIE,
+        value=token,
+        httponly=True,
+        secure=settings.ENVIRONMENT == "production",
+        samesite="lax",
+        path=_COOKIE_PATH,
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
     )
+
+
+def _clear_refresh_cookie(response: Response) -> None:
+    response.delete_cookie(REFRESH_COOKIE, path=_COOKIE_PATH)
+
+
+def _issue_session(
+    db: Session, response: Response, user_id: uuid.UUID
+) -> AccessToken:
+    """Emite access token (body) y refresh token persistido (cookie httpOnly)."""
+    sub = str(user_id)
+    refresh, jti, expira = create_refresh_token(sub)
+    crud_token.store(db, jti=jti, usuario_id=user_id, expires_at=expira)
+    _set_refresh_cookie(response, refresh)
+    return AccessToken(access_token=create_access_token(sub))
 
 
 def _dev_token(token: str) -> str | None:
@@ -92,13 +117,14 @@ def register(
     return UserRead.model_validate(user)
 
 
-@router.post("/login", response_model=Token, summary="Iniciar sesión")
+@router.post("/login", response_model=AccessToken, summary="Iniciar sesión")
 @limiter.limit("10/minute")
 def login(
     request: Request,
+    response: Response,
     form: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
-) -> Token:
+) -> AccessToken:
     # OAuth2PasswordRequestForm usa "username"; aquí es el email.
     user = crud_user.authenticate(db, form.username, form.password)
     if user is None:
@@ -112,27 +138,57 @@ def login(
             status_code=status.HTTP_403_FORBIDDEN, detail="Usuario inactivo"
         )
     crud_user.touch_last_login(db, user)
-    return _tokens_for(user.id)
+    return _issue_session(db, response, user.id)
 
 
-@router.post("/refresh", response_model=Token, summary="Renovar tokens")
-def refresh(body: RefreshRequest, db: Session = Depends(get_db)) -> Token:
+@router.post("/refresh", response_model=AccessToken, summary="Renovar sesión")
+def refresh(
+    request: Request, response: Response, db: Session = Depends(get_db)
+) -> AccessToken:
     invalid = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Refresh token inválido o expirado",
+        detail="Sesión inválida o expirada",
     )
+    token = request.cookies.get(REFRESH_COOKIE)
+    if not token:
+        raise invalid
     try:
-        sub = decode_token_of_type(body.refresh_token, REFRESH_TOKEN_TYPE)
-        user_id = uuid.UUID(sub)
-    except (jwt.PyJWTError, ValueError):
+        payload = decode_token(token)
+        if payload.get("type") != REFRESH_TOKEN_TYPE:
+            raise invalid
+        jti = payload.get("jti")
+        user_id = uuid.UUID(payload["sub"])
+    except (jwt.PyJWTError, ValueError, KeyError):
         raise invalid
 
+    if not jti or not crud_token.is_valid(db, jti):
+        raise invalid
     user = crud_user.get_by_id(db, user_id)
     if user is None or not user.is_active:
         raise invalid
-    # Rotación: nuevo par. (Revocación del anterior llegará con almacenamiento
-    # de refresh tokens en la etapa de hardening.)
-    return _tokens_for(user.id)
+
+    # Rotación: revoca el refresh actual y emite uno nuevo.
+    crud_token.revoke(db, jti)
+    return _issue_session(db, response, user.id)
+
+
+@router.post(
+    "/logout",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Cerrar sesión (revoca el refresh)",
+)
+def logout(
+    request: Request, response: Response, db: Session = Depends(get_db)
+) -> None:
+    token = request.cookies.get(REFRESH_COOKIE)
+    if token:
+        try:
+            jti = decode_token(token).get("jti")
+            if jti:
+                crud_token.revoke(db, jti)
+        except jwt.PyJWTError:
+            pass
+    _clear_refresh_cookie(response)
 
 
 # --- Verificación de correo ---
@@ -268,12 +324,12 @@ def request_magic_link(
 
 @router.post(
     "/magic-link/consume",
-    response_model=Token,
+    response_model=AccessToken,
     summary="Canjear enlace mágico por sesión",
 )
 def consume_magic_link(
-    body: TokenRequest, db: Session = Depends(get_db)
-) -> Token:
+    body: TokenRequest, response: Response, db: Session = Depends(get_db)
+) -> AccessToken:
     invalid = HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail="Enlace inválido o expirado",
@@ -289,4 +345,4 @@ def consume_magic_link(
     # El enlace mágico prueba propiedad del correo: queda verificado.
     crud_user.mark_verified(db, user)
     crud_user.touch_last_login(db, user)
-    return _tokens_for(user.id)
+    return _issue_session(db, response, user.id)

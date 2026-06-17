@@ -15,6 +15,7 @@ from app.models.catalog import (
     variante_valores,
 )
 from app.models.audit import Auditoria
+from app.models.auth_token import RefreshToken
 from app.models.cart import Carrito, CarritoItem
 from app.models.inventory import (
     Almacen,
@@ -59,4 +60,6 @@ __all__ = [
     "EstadoPedido",
     # auditoría
     "Auditoria",
+    # auth tokens
+    "RefreshToken",
 ]
