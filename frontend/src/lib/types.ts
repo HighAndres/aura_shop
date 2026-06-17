@@ -134,6 +134,82 @@ export interface Pedido {
   created_at: string;
 }
 
+// --- Admin ---
+
+export interface ProductoAdmin {
+  id: string;
+  nombre: string;
+  slug: string;
+  activo: boolean;
+  destacado: boolean;
+  marca: string | null;
+  categoria: string | null;
+  num_variantes: number;
+  precio_min: string | null;
+}
+
+export interface VarianteAdmin {
+  id: string;
+  sku: string;
+  nombre: string | null;
+  precio: string;
+  precio_comparativo: string | null;
+  activo: boolean;
+}
+
+export interface ProductoAdminDetalle {
+  id: string;
+  nombre: string;
+  slug: string;
+  descripcion: string | null;
+  descripcion_corta: string | null;
+  marca_id: string | null;
+  categoria_id: string | null;
+  destacado: boolean;
+  activo: boolean;
+  variantes: VarianteAdmin[];
+}
+
+export interface Auditoria {
+  id: string;
+  actor_email: string | null;
+  actor_rol: string | null;
+  accion: string;
+  entidad: string | null;
+  entidad_id: string | null;
+  descripcion: string;
+  cambios: Record<string, unknown> | null;
+  ip: string | null;
+  created_at: string;
+}
+
+export interface AuditoriaPage {
+  items: Auditoria[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface VentasResumen {
+  num_pedidos: number;
+  ingresos: string;
+  ticket_promedio: string;
+  por_estado: Record<string, number>;
+}
+
+export interface TopProducto {
+  sku: string;
+  nombre: string;
+  cantidad: number;
+  ingreso: string;
+}
+
+export interface StockBajoItem {
+  sku: string;
+  producto: string;
+  disponible: number;
+}
+
 export interface CheckoutPayload {
   email?: string;
   nombre_contacto: string;

@@ -18,9 +18,11 @@ from app.models.catalog import (
 from app.schemas.admin import (
     CategoriaCreate,
     MarcaCreate,
+    ProductoAdminDetail,
     ProductoAdminRead,
     ProductoCreate,
     ProductoUpdate,
+    VarianteAdminRead,
     VarianteCreate,
     VarianteUpdate,
 )
@@ -180,6 +182,21 @@ def _jsonable(v: Any) -> Any:
     if isinstance(v, uuid.UUID):
         return str(v)
     return v
+
+
+def serialize_admin_detail(p: Producto) -> ProductoAdminDetail:
+    return ProductoAdminDetail(
+        id=p.id,
+        nombre=p.nombre,
+        slug=p.slug,
+        descripcion=p.descripcion,
+        descripcion_corta=p.descripcion_corta,
+        marca_id=p.marca_id,
+        categoria_id=p.categoria_id,
+        destacado=p.destacado,
+        activo=p.activo,
+        variantes=[VarianteAdminRead.model_validate(v) for v in p.variantes],
+    )
 
 
 def serialize_admin_item(p: Producto) -> ProductoAdminRead:

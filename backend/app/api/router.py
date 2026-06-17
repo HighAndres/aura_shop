@@ -10,6 +10,7 @@ from app.api.routes import (
     catalog,
     inventory,
     orders,
+    reports,
     users,
 )
 
@@ -22,3 +23,4 @@ api_router.include_router(cart.router)
 api_router.include_router(orders.router)
 api_router.include_router(audit.router)
 api_router.include_router(admin_catalog.router)
+api_router.include_router(reports.router)

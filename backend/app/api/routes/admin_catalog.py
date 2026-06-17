@@ -13,6 +13,7 @@ from app.models.user import Usuario
 from app.schemas.admin import (
     CategoriaCreate,
     MarcaCreate,
+    ProductoAdminDetail,
     ProductoAdminRead,
     ProductoCreate,
     ProductoUpdate,
@@ -41,6 +42,21 @@ def listar(
 ) -> list[ProductoAdminRead]:
     items, _ = crud.list_productos_admin(db, q=q, limit=limit, offset=offset)
     return [crud.serialize_admin_item(p) for p in items]
+
+
+@router.get(
+    "/productos/{producto_id}",
+    response_model=ProductoAdminDetail,
+    summary="Detalle de producto (admin, con variantes)",
+    dependencies=[Depends(require_permissions("productos.leer"))],
+)
+def detalle(
+    producto_id: uuid.UUID, db: Session = Depends(get_db)
+) -> ProductoAdminDetail:
+    producto = crud.get_producto(db, producto_id)
+    if producto is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Producto no encontrado")
+    return crud.serialize_admin_detail(producto)
 
 
 @router.post(

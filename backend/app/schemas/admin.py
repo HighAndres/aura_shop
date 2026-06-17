@@ -75,6 +75,19 @@ class VarianteAdminRead(BaseModel):
     activo: bool
 
 
+class ProductoAdminDetail(BaseModel):
+    id: uuid.UUID
+    nombre: str
+    slug: str
+    descripcion: str | None = None
+    descripcion_corta: str | None = None
+    marca_id: uuid.UUID | None = None
+    categoria_id: uuid.UUID | None = None
+    destacado: bool
+    activo: bool
+    variantes: list[VarianteAdminRead] = []
+
+
 # --- Marcas / Categorías ---
 
 class MarcaCreate(BaseModel):
