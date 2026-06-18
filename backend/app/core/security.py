@@ -50,12 +50,22 @@ def create_access_token(subject: str) -> str:
     )
 
 
-def create_refresh_token(subject: str) -> str:
-    return _create_token(
-        subject,
-        REFRESH_TOKEN_TYPE,
-        timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
-    )
+def create_refresh_token(subject: str) -> tuple[str, str, datetime]:
+    """Crea un refresh token con `jti`. Devuelve (token, jti, expira_en)."""
+    import uuid
+
+    now = datetime.now(timezone.utc)
+    expira = now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    jti = uuid.uuid4().hex
+    payload = {
+        "sub": subject,
+        "type": REFRESH_TOKEN_TYPE,
+        "jti": jti,
+        "iat": now,
+        "exp": expira,
+    }
+    token = jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    return token, jti, expira
 
 
 def create_email_verify_token(subject: str) -> str:

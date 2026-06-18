@@ -51,6 +51,30 @@ class PedidoItemRead(BaseModel):
     subtotal: Decimal
 
 
+class PedidoAdminItem(BaseModel):
+    """Resumen de pedido para la gestión del personal."""
+
+    id: uuid.UUID
+    numero: str
+    email: EmailStr
+    nombre_contacto: str
+    estado: str
+    total: Decimal
+    num_items: int
+    created_at: datetime
+
+
+class PedidosAdminPage(BaseModel):
+    items: list[PedidoAdminItem]
+    total: int
+    limit: int
+    offset: int
+
+
+class EstadoUpdate(BaseModel):
+    estado: str  # pagado | enviado | entregado (cancelar usa endpoint aparte)
+
+
 class PedidoRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

@@ -1,4 +1,4 @@
-# Aura
+# Aura Shop
 
 Marketplace de productos de belleza y cuidado personal. Odoo es la fuente de verdad (ERP);
 el marketplace es un canal de venta que sincroniza catálogo/precios/stock desde Odoo y
@@ -28,6 +28,7 @@ copy .env.example .env   # ajustar credenciales de PostgreSQL
 python scripts\create_db.py      # crea la base 'aura'
 alembic upgrade head             # aplica migraciones
 python scripts\seed_rbac.py      # roles y permisos base
+python scripts\seed_admins.py    # usuarios de prueba del personal (ver abajo)
 python scripts\seed_catalog.py   # catálogo de ejemplo
 python scripts\seed_inventory.py # almacén + stock inicial
 
@@ -49,6 +50,19 @@ npm run dev
 ```
 
 - Tienda: http://localhost:3000 (requiere el backend corriendo en :8000)
+
+## Usuarios de prueba (solo desarrollo)
+
+`seed_admins.py` crea el personal. Inicia sesión en http://localhost:3000/login:
+
+| Rol | Correo | Contraseña |
+|-----|--------|-----------|
+| Super admin | super@aura.mx | super12345 |
+| Administrador | admin@aura.mx | admin12345 |
+| Vendedor | vendedor@aura.mx | vendedor12345 |
+
+Tras entrar, el panel está en el icono ▦ del header (o `/admin`). **No** usar estas
+credenciales en producción.
 
 ## Notas
 

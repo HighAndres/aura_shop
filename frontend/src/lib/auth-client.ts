@@ -1,25 +1,24 @@
-// Cliente de autenticación (navegador). Guarda los JWT en localStorage.
+// Cliente de autenticación (navegador).
+// El ACCESS token se guarda en localStorage; el REFRESH vive en una cookie
+// httpOnly (no accesible a JS) que el navegador envía a /auth/* con credentials.
 
-import type { TokenPair, Usuario } from "@/lib/types";
+import type { Usuario } from "@/lib/types";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000/api/v1";
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 const ACCESS_KEY = "aura_access_token";
-const REFRESH_KEY = "aura_refresh_token";
 
 export function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
   return window.localStorage.getItem(ACCESS_KEY);
 }
 
-function storeTokens(t: TokenPair) {
-  window.localStorage.setItem(ACCESS_KEY, t.access_token);
-  window.localStorage.setItem(REFRESH_KEY, t.refresh_token);
+function setAccess(token: string) {
+  window.localStorage.setItem(ACCESS_KEY, token);
 }
 
 export function clearTokens() {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(ACCESS_KEY);
-  window.localStorage.removeItem(REFRESH_KEY);
 }
 
 async function readError(res: Response): Promise<string> {
@@ -39,9 +38,11 @@ export async function login(email: string, password: string): Promise<void> {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: form,
+    credentials: "include", // recibe la cookie httpOnly del refresh
   });
   if (!res.ok) throw new Error(await readError(res));
-  storeTokens(await res.json());
+  const data = await res.json();
+  setAccess(data.access_token);
 }
 
 export async function register(
@@ -66,28 +67,39 @@ export async function forgotPassword(email: string): Promise<void> {
   });
 }
 
+/** Renueva el access usando la cookie de refresh. Devuelve true si lo logró. */
 async function refresh(): Promise<boolean> {
-  const refresh_token = window.localStorage.getItem(REFRESH_KEY);
-  if (!refresh_token) return false;
   const res = await fetch(`${API}/auth/refresh`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh_token }),
+    credentials: "include",
   });
   if (!res.ok) {
     clearTokens();
     return false;
   }
-  storeTokens(await res.json());
+  const data = await res.json();
+  setAccess(data.access_token);
   return true;
 }
 
-/** Devuelve el usuario actual, intentando refrescar el token si expiró. */
+export async function logout(): Promise<void> {
+  try {
+    await fetch(`${API}/auth/logout`, { method: "POST", credentials: "include" });
+  } catch {
+    /* aunque falle la red, limpiamos local */
+  }
+  clearTokens();
+}
+
+/** Devuelve el usuario actual; si el access expiró, intenta refrescar una vez. */
 export async function me(): Promise<Usuario | null> {
   const token = getAccessToken();
-  if (!token) return null;
+  // Sin access pero quizá haya cookie de refresh: intenta refrescar.
+  if (!token) {
+    if (!(await refresh())) return null;
+  }
   let res = await fetch(`${API}/users/me`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${getAccessToken()}` },
   });
   if (res.status === 401 && (await refresh())) {
     res = await fetch(`${API}/users/me`, {

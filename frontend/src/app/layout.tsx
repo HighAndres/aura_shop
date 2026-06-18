@@ -25,8 +25,8 @@ const fraunces = Fraunces({
 
 export const metadata: Metadata = {
   title: {
-    default: "Aura — belleza & cuidado personal",
-    template: "%s · Aura",
+    default: "Aura Shop — belleza & cuidado personal",
+    template: "%s · Aura Shop",
   },
   description:
     "Marketplace de productos de belleza y cuidado personal. Envíos en México.",

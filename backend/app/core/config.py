@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     )
 
     # ---- App ----
-    PROJECT_NAME: str = "Aura API"
+    PROJECT_NAME: str = "Aura Shop API"
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
     API_V1_PREFIX: str = "/api/v1"

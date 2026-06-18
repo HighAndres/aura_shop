@@ -71,8 +71,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [afterAuth],
   );
 
-  const logout = useCallback(() => {
-    auth.clearTokens();
+  const logout = useCallback(async () => {
+    await auth.logout();
     setUser(null);
     void cart.refresh();
   }, [cart]);
