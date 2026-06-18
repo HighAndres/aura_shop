@@ -34,7 +34,7 @@ def send_verification_email(to: str, token: str) -> None:
     link = _link("/verificar-correo", token)
     send_email(
         to=to,
-        subject="Verifica tu correo en Aura",
+        subject="Verifica tu correo en Aura Shop",
         body=f"Confirma tu cuenta entrando aquí:\n{link}",
     )
 
@@ -43,7 +43,7 @@ def send_password_reset_email(to: str, token: str) -> None:
     link = _link("/restablecer-contrasena", token)
     send_email(
         to=to,
-        subject="Restablece tu contraseña de Aura",
+        subject="Restablece tu contraseña de Aura Shop",
         body=f"Crea una nueva contraseña aquí:\n{link}",
     )
 
@@ -52,6 +52,6 @@ def send_magic_link_email(to: str, token: str) -> None:
     link = _link("/acceso", token)
     send_email(
         to=to,
-        subject="Tu enlace de acceso a Aura",
+        subject="Tu enlace de acceso a Aura Shop",
         body=f"Entra a tu cuenta con este enlace (15 min):\n{link}",
     )

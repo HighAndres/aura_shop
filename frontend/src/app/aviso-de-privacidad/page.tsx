@@ -11,7 +11,7 @@ export default function AvisoPrivacidadPage() {
         Posesión de los Particulares (LFPDPPP).
       </p>
       <p className="text-sm leading-relaxed text-muted-foreground">
-        Aura recaba tus datos personales (nombre, correo, teléfono y datos de
+        Aura Shop recaba tus datos personales (nombre, correo, teléfono y datos de
         envío y facturación) con la finalidad de procesar tus pedidos, emitir
         comprobantes fiscales (CFDI) y brindarte atención. No compartimos tus
         datos con terceros salvo lo necesario para completar tu compra.

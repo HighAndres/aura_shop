@@ -13,7 +13,7 @@ export function SiteHeader() {
           className="flex items-baseline gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span className="font-display text-2xl font-semibold tracking-tight">
-            Aura
+            Aura Shop
           </span>
           <span className="hidden text-xs font-medium uppercase tracking-widest text-muted-foreground sm:inline">
             belleza

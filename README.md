@@ -1,4 +1,4 @@
-# Aura
+# Aura Shop
 
 Marketplace de productos de belleza y cuidado personal. Odoo es la fuente de verdad (ERP);
 el marketplace es un canal de venta que sincroniza catálogo/precios/stock desde Odoo y
