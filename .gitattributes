@@ -6,6 +6,10 @@
 *.bat text eol=crlf
 *.cmd text eol=crlf
 
+# Scripts de shell SIEMPRE LF (si no, el shebang truena en Linux/Docker).
+*.sh text eol=lf
+entrypoint.sh text eol=lf
+
 # Binarios: sin conversión.
 *.png binary
 *.jpg binary
