@@ -4,6 +4,7 @@ import type {
   AuditoriaPage,
   Categoria,
   Marca,
+  PedidosAdminPage,
   ProductoAdmin,
   ProductoAdminDetalle,
   StockBajoItem,
@@ -103,6 +104,26 @@ export function listMarcas() {
 
 export function listCategorias() {
   return req<Categoria[]>("/catalog/categorias");
+}
+
+// --- Pedidos ---
+export function fetchPedidos(params: { estado?: string; q?: string } = {}) {
+  const qs = new URLSearchParams();
+  if (params.estado) qs.set("estado", params.estado);
+  if (params.q) qs.set("q", params.q);
+  qs.set("limit", "100");
+  return req<PedidosAdminPage>(`/orders/admin?${qs.toString()}`);
+}
+
+export function cambiarEstadoPedido(numero: string, estado: string) {
+  return req(`/orders/admin/${numero}/estado`, {
+    method: "POST",
+    body: JSON.stringify({ estado }),
+  });
+}
+
+export function cancelarPedido(numero: string) {
+  return req(`/orders/admin/${numero}/cancelar`, { method: "POST" });
 }
 
 // --- Reportes ---

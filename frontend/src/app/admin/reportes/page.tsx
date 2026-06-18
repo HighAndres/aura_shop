@@ -1,13 +1,22 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { useAuth } from "@/components/auth-provider";
 import { Skeleton } from "@/components/ui/skeleton";
 import * as admin from "@/lib/admin-client";
 import { formatMXN } from "@/lib/format";
+import { esAdministrador } from "@/lib/roles";
 import type { StockBajoItem, TopProducto, VentasResumen } from "@/lib/types";
 
 export default function ReportesPage() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  useEffect(() => {
+    if (!authLoading && !esAdministrador(user)) router.replace("/admin/pedidos");
+  }, [authLoading, user, router]);
+
   const [ventas, setVentas] = useState<VentasResumen | null>(null);
   const [top, setTop] = useState<TopProducto[]>([]);
   const [bajo, setBajo] = useState<StockBajoItem[]>([]);

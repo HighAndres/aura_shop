@@ -5,7 +5,7 @@ import { CircleUserRound, LayoutDashboard } from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
-import { esAdministrador } from "@/lib/roles";
+import { esStaff } from "@/lib/roles";
 
 export function UserMenu() {
   const { user, loading } = useAuth();
@@ -26,14 +26,14 @@ export function UserMenu() {
 
   return (
     <>
-      {esAdministrador(user) ? (
+      {esStaff(user) ? (
         <Button
           asChild
           variant="ghost"
           size="icon"
           aria-label="Panel de administración"
         >
-          <Link href="/admin/productos">
+          <Link href="/admin">
             <LayoutDashboard className="size-5" />
           </Link>
         </Button>

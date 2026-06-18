@@ -210,6 +210,24 @@ export interface StockBajoItem {
   disponible: number;
 }
 
+export interface PedidoAdminItem {
+  id: string;
+  numero: string;
+  email: string;
+  nombre_contacto: string;
+  estado: string;
+  total: string;
+  num_items: number;
+  created_at: string;
+}
+
+export interface PedidosAdminPage {
+  items: PedidoAdminItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface CheckoutPayload {
   email?: string;
   nombre_contacto: string;

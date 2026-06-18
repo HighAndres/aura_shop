@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { esAdministrador, esSuperadmin } from "@/lib/roles";
+import { esAdministrador, esStaff, esSuperadmin } from "@/lib/roles";
 
 export default function AdminLayout({
   children,
@@ -19,16 +19,21 @@ export default function AdminLayout({
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!loading && !esAdministrador(user)) router.replace("/login");
+    if (!loading && !esStaff(user)) router.replace("/login");
   }, [loading, user, router]);
 
-  if (loading || !esAdministrador(user)) {
+  if (loading || !esStaff(user)) {
     return <Skeleton className="h-64 w-full" />;
   }
 
   const nav = [
-    { href: "/admin/productos", label: "Productos" },
-    { href: "/admin/reportes", label: "Reportes" },
+    { href: "/admin/pedidos", label: "Pedidos" },
+    ...(esAdministrador(user)
+      ? [
+          { href: "/admin/productos", label: "Productos" },
+          { href: "/admin/reportes", label: "Reportes" },
+        ]
+      : []),
     ...(esSuperadmin(user)
       ? [{ href: "/admin/bitacora", label: "Bitácora" }]
       : []),

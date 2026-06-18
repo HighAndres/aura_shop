@@ -1,20 +1,29 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 
+import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import * as admin from "@/lib/admin-client";
 import { formatMXN } from "@/lib/format";
+import { esAdministrador } from "@/lib/roles";
 import type { Categoria, Marca, ProductoAdmin } from "@/lib/types";
 
 const selectCls =
   "h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export default function AdminProductosPage() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  useEffect(() => {
+    if (!authLoading && !esAdministrador(user)) router.replace("/admin/pedidos");
+  }, [authLoading, user, router]);
+
   const [productos, setProductos] = useState<ProductoAdmin[] | null>(null);
   const [marcas, setMarcas] = useState<Marca[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);

@@ -3,17 +3,30 @@
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session
 
 from app.crud import inventory as crud_inv
 from app.models.cart import Carrito
 from app.models.catalog import Variante
 from app.models.inventory import StockMovimiento, TipoMovimiento
-from app.models.order import Pedido, PedidoItem
+from app.models.order import EstadoPedido, Pedido, PedidoItem
 from app.schemas.order import CheckoutIn
 
 ALMACEN_CHECKOUT = "PRINCIPAL"
+
+# Transiciones de estado permitidas (máquina de estados del pedido).
+TRANSICIONES: dict[str, set[str]] = {
+    "pendiente": {"pagado", "cancelado"},
+    "pagado": {"enviado", "cancelado"},
+    "enviado": {"entregado"},
+    "entregado": set(),
+    "cancelado": set(),
+}
+
+
+class TransicionInvalidaError(Exception):
+    """El cambio de estado solicitado no está permitido."""
 
 
 class CheckoutError(Exception):
@@ -145,3 +158,72 @@ def checkout(
     db.commit()
     db.refresh(pedido)
     return pedido
+
+
+# --- Gestión por el personal ---
+
+def list_pedidos(
+    db: Session,
+    *,
+    estado: str | None = None,
+    q: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> tuple[list[Pedido], int]:
+    stmt: Select = select(Pedido)
+    if estado:
+        stmt = stmt.where(Pedido.estado == estado)
+    if q:
+        like = f"%{q}%"
+        stmt = stmt.where(Pedido.numero.ilike(like) | Pedido.email.ilike(like))
+    total = db.scalar(select(func.count()).select_from(stmt.order_by(None).subquery()))
+    items = list(
+        db.scalars(
+            stmt.order_by(Pedido.created_at.desc()).limit(limit).offset(offset)
+        ).all()
+    )
+    return items, total or 0
+
+
+def get_pedido_by_numero(db: Session, numero: str) -> Pedido | None:
+    return db.scalar(select(Pedido).where(Pedido.numero == numero))
+
+
+def cambiar_estado(db: Session, pedido: Pedido, nuevo: str) -> str:
+    """Cambia el estado validando la transición. Devuelve el estado anterior."""
+    if nuevo not in TRANSICIONES.get(pedido.estado, set()):
+        raise TransicionInvalidaError(
+            f"No se puede pasar de '{pedido.estado}' a '{nuevo}'"
+        )
+    anterior = pedido.estado
+    pedido.estado = nuevo
+    db.commit()
+    db.refresh(pedido)
+    return anterior
+
+
+def cancelar_pedido(db: Session, pedido: Pedido) -> str:
+    """Cancela el pedido y reabastece el inventario (entradas reversa)."""
+    if "cancelado" not in TRANSICIONES.get(pedido.estado, set()):
+        raise TransicionInvalidaError(
+            f"No se puede cancelar un pedido en estado '{pedido.estado}'"
+        )
+    anterior = pedido.estado
+    almacen = crud_inv.get_almacen_by_codigo(db, ALMACEN_CHECKOUT)
+    for it in pedido.items:
+        if it.variante_id is None or almacen is None:
+            continue
+        db.add(
+            StockMovimiento(
+                variante_id=it.variante_id,
+                almacen_id=almacen.id,
+                tipo=TipoMovimiento.ENTRADA.value,
+                cantidad=it.cantidad,
+                referencia=pedido.numero,
+                nota="Reabasto por cancelación",
+            )
+        )
+    pedido.estado = "cancelado"
+    db.commit()
+    db.refresh(pedido)
+    return anterior
