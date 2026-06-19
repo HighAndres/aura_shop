@@ -29,6 +29,7 @@ class AdminUserCreate(BaseModel):
 class AdminUserUpdate(BaseModel):
     nombre_completo: str | None = Field(default=None, max_length=255)
     telefono: str | None = Field(default=None, max_length=32)
+    password: str | None = Field(default=None, min_length=8, max_length=128)
     is_active: bool | None = None
     is_verified: bool | None = None
     roles: list[str] | None = None
@@ -161,6 +162,9 @@ def editar_usuario(
         user.nombre_completo = changes["nombre_completo"]
     if "telefono" in changes:
         user.telefono = changes["telefono"]
+    if "password" in changes and body.password:
+        user.hashed_password = hash_password(body.password)
+        del changes["password"]
     if "is_active" in changes:
         user.is_active = changes["is_active"]
     if "is_verified" in changes:

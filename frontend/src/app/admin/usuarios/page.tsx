@@ -7,6 +7,8 @@ import {
   ToggleLeft,
   ToggleRight,
   Search,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
@@ -45,12 +47,12 @@ export default function AdminUsuariosPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState<Usuario | null>(null);
 
-  // Form state
   const [formEmail, setFormEmail] = useState("");
   const [formPassword, setFormPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [formNombre, setFormNombre] = useState("");
   const [formTelefono, setFormTelefono] = useState("");
-  const [formRoles, setFormRoles] = useState<string[]>([]);
+  const [formRol, setFormRol] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -89,9 +91,10 @@ export default function AdminUsuariosPage() {
   function resetForm() {
     setFormEmail("");
     setFormPassword("");
+    setShowPassword(false);
     setFormNombre("");
     setFormTelefono("");
-    setFormRoles([]);
+    setFormRol("");
     setError("");
   }
 
@@ -105,19 +108,12 @@ export default function AdminUsuariosPage() {
     setEditingUser(u);
     setFormEmail(u.email);
     setFormPassword("");
+    setShowPassword(false);
     setFormNombre(u.nombre_completo ?? "");
     setFormTelefono(u.telefono ?? "");
-    setFormRoles([...u.roles]);
+    setFormRol(u.roles[0] ?? "");
     setError("");
     setShowForm(true);
-  }
-
-  function toggleRole(rolName: string) {
-    setFormRoles((prev) =>
-      prev.includes(rolName)
-        ? prev.filter((r) => r !== rolName)
-        : [...prev, rolName],
-    );
   }
 
   async function handleSave() {
@@ -125,18 +121,27 @@ export default function AdminUsuariosPage() {
     setError("");
     try {
       if (editingUser) {
+        const body: Record<string, unknown> = {
+          nombre_completo: formNombre || null,
+          telefono: formTelefono || null,
+          roles: formRol ? [formRol] : [],
+        };
+        if (formPassword) {
+          body.password = formPassword;
+        }
         await adminFetch(`/admin/users/${editingUser.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            nombre_completo: formNombre || null,
-            telefono: formTelefono || null,
-            roles: formRoles,
-          }),
+          body: JSON.stringify(body),
         });
       } else {
         if (!formEmail || !formPassword) {
           setError("Email y contraseña son obligatorios");
+          setSaving(false);
+          return;
+        }
+        if (!formRol) {
+          setError("Selecciona un rol");
           setSaving(false);
           return;
         }
@@ -148,7 +153,7 @@ export default function AdminUsuariosPage() {
             password: formPassword,
             nombre_completo: formNombre || null,
             telefono: formTelefono || null,
-            roles: formRoles,
+            roles: [formRol],
           }),
         });
       }
@@ -208,7 +213,7 @@ export default function AdminUsuariosPage() {
             <TableRow>
               <TableHead>Email</TableHead>
               <TableHead>Nombre</TableHead>
-              <TableHead>Roles</TableHead>
+              <TableHead>Rol</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead>Verificado</TableHead>
               <TableHead>Registro</TableHead>
@@ -236,17 +241,13 @@ export default function AdminUsuariosPage() {
                     {u.nombre_completo ?? "—"}
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {u.roles.length > 0 ? (
-                        u.roles.map((r) => (
-                          <Badge key={r} variant="secondary" className="text-xs capitalize">
-                            {r}
-                          </Badge>
-                        ))
-                      ) : (
-                        <span className="text-xs text-muted-foreground">sin rol</span>
-                      )}
-                    </div>
+                    {u.roles.length > 0 ? (
+                      <Badge variant="secondary" className="text-xs capitalize">
+                        {u.roles[0]}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">sin rol</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -333,7 +334,6 @@ export default function AdminUsuariosPage() {
         </div>
       )}
 
-      {/* Create / Edit dialog */}
       <Dialog open={showForm} onOpenChange={(open) => { if (!open) { setShowForm(false); resetForm(); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -341,28 +341,38 @@ export default function AdminUsuariosPage() {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            {!editingUser && (
-              <>
-                <div>
-                  <Label htmlFor="user-email">Email</Label>
-                  <Input
-                    id="user-email"
-                    type="email"
-                    value={formEmail}
-                    onChange={(e) => setFormEmail(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="user-pass">Contraseña</Label>
-                  <Input
-                    id="user-pass"
-                    type="password"
-                    value={formPassword}
-                    onChange={(e) => setFormPassword(e.target.value)}
-                  />
-                </div>
-              </>
-            )}
+            <div>
+              <Label htmlFor="user-email">Email</Label>
+              <Input
+                id="user-email"
+                type="email"
+                value={formEmail}
+                onChange={(e) => setFormEmail(e.target.value)}
+                disabled={!!editingUser}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="user-pass">
+                {editingUser ? "Nueva contraseña (dejar vacío para no cambiar)" : "Contraseña"}
+              </Label>
+              <div className="relative">
+                <Input
+                  id="user-pass"
+                  type={showPassword ? "text" : "password"}
+                  value={formPassword}
+                  onChange={(e) => setFormPassword(e.target.value)}
+                  placeholder={editingUser ? "••••••••" : ""}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
 
             <div>
               <Label htmlFor="user-nombre">Nombre completo</Label>
@@ -383,28 +393,30 @@ export default function AdminUsuariosPage() {
             </div>
 
             <div>
-              <Label>Roles</Label>
+              <Label>Rol</Label>
               <div className="mt-2 flex flex-wrap gap-2">
-                {roles.map((rol) => {
-                  const selected = formRoles.includes(rol.nombre);
-                  const disabled =
-                    rol.nombre === "superadmin" && !isSuperadmin;
-                  return (
-                    <button
-                      key={rol.nombre}
-                      type="button"
-                      disabled={disabled}
-                      onClick={() => toggleRole(rol.nombre)}
-                      className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${
-                        selected
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border text-muted-foreground hover:bg-muted"
-                      } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                    >
-                      {rol.nombre}
-                    </button>
-                  );
-                })}
+                {roles
+                  .filter((rol) => !["cliente", "invitado"].includes(rol.nombre))
+                  .map((rol) => {
+                    const selected = formRol === rol.nombre;
+                    const disabled =
+                      rol.nombre === "superadmin" && !isSuperadmin;
+                    return (
+                      <button
+                        key={rol.nombre}
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => setFormRol(selected ? "" : rol.nombre)}
+                        className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${
+                          selected
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-muted-foreground hover:bg-muted"
+                        } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                      >
+                        {rol.nombre}
+                      </button>
+                    );
+                  })}
               </div>
               {roles.length === 0 && (
                 <p className="mt-1 text-xs text-muted-foreground">Cargando roles...</p>
