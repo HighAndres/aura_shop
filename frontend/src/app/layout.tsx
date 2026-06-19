@@ -5,8 +5,6 @@ import "./globals.css";
 
 import { AuthProvider } from "@/components/auth-provider";
 import { CartProvider } from "@/components/cart-provider";
-import { SiteFooter } from "@/components/site-footer";
-import { SiteHeader } from "@/components/site-header";
 import { cn } from "@/lib/utils";
 
 const geistSans = localFont({
@@ -15,7 +13,6 @@ const geistSans = localFont({
   weight: "100 900",
 });
 
-// Tipografía editorial para títulos (look "beauty" moderno).
 const fraunces = Fraunces({
   subsets: ["latin"],
   variable: "--font-display",
@@ -43,11 +40,7 @@ export default function RootLayout({
       <body className="flex min-h-dvh flex-col font-sans antialiased">
         <CartProvider>
           <AuthProvider>
-            <SiteHeader />
-            <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
-              {children}
-            </main>
-            <SiteFooter />
+            {children}
           </AuthProvider>
         </CartProvider>
       </body>

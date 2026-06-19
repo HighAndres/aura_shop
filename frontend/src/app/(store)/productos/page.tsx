@@ -1,5 +1,6 @@
 import { ProductCard } from "@/components/product-card";
 import { getProductos } from "@/lib/catalog";
+import type { ProductoListItem } from "@/lib/types";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Productos" };
@@ -13,7 +14,7 @@ interface PageProps {
 }
 
 export default async function ProductosPage({ searchParams }: PageProps) {
-  let items = [];
+  let items: ProductoListItem[] = [];
   let total = 0;
   let errorApi = false;
 
