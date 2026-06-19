@@ -54,9 +54,9 @@ ROLES: dict[str, dict] = {
         ],
     },
     "vendedor": {
-        "descripcion": "Procesa pedidos y consulta catálogo/inventario (sin editar precios ni ajustar stock)",
+        "descripcion": "Procesa pedidos, da de alta productos y consulta inventario (sin editar precios ni ajustar stock)",
         "permisos": [
-            "productos.leer",
+            "productos.leer", "productos.crear", "productos.editar",
             "inventario.leer",
             "pedidos.leer", "pedidos.editar",
         ],

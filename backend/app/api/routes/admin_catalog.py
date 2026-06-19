@@ -7,6 +7,12 @@ from sqlalchemy.orm import Session
 from app.api.deps import require_permissions
 from app.core import audit
 from app.db.session import get_db
+
+PRICE_ADMIN_ROLES = {"superadmin", "administrador"}
+
+
+def _user_can_set_prices(user: "Usuario") -> bool:
+    return bool({r.nombre for r in user.roles} & PRICE_ADMIN_ROLES)
 from app.models.catalog import (
     Categoria,
     Marca,
@@ -263,6 +269,8 @@ def crear_producto(
         if db.scalar(select(Variante).where(Variante.sku == v.sku)):
             raise HTTPException(status.HTTP_409_CONFLICT, f"SKU ya existe: {v.sku}")
 
+    can_price = _user_can_set_prices(current_user)
+
     producto = Producto(
         nombre=body.nombre,
         slug=body.slug,
@@ -270,11 +278,16 @@ def crear_producto(
         descripcion_corta=body.descripcion_corta,
         marca_id=body.marca_id,
         categoria_id=body.categoria_id,
-        destacado=body.destacado,
+        destacado=body.destacado if can_price else False,
+        activo=can_price,
     )
 
     for v in body.variantes:
-        producto.variantes.append(Variante(**v.model_dump()))
+        v_data = v.model_dump()
+        if not can_price:
+            v_data["precio"] = 0
+            v_data["precio_comparativo"] = None
+        producto.variantes.append(Variante(**v_data))
 
     for img in body.imagenes:
         producto.imagenes.append(ProductoImagen(**img.model_dump()))
@@ -308,10 +321,14 @@ def editar_producto(
     if producto is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Producto no encontrado")
 
+    can_price = _user_can_set_prices(current_user)
     changes = body.model_dump(exclude_unset=True)
 
-    for field in ("nombre", "slug", "descripcion", "descripcion_corta",
-                  "marca_id", "categoria_id", "destacado"):
+    editable_fields = ["nombre", "slug", "descripcion", "descripcion_corta",
+                       "marca_id", "categoria_id"]
+    if can_price:
+        editable_fields.append("destacado")
+    for field in editable_fields:
         if field in changes:
             setattr(producto, field, changes[field])
 
@@ -319,23 +336,29 @@ def editar_producto(
         existing_skus = {v.sku: v for v in producto.variantes}
         incoming_skus = {v.sku for v in body.variantes}
 
-        for v in list(producto.variantes):
-            if v.sku not in incoming_skus:
-                db.delete(v)
+        if can_price:
+            for v in list(producto.variantes):
+                if v.sku not in incoming_skus:
+                    db.delete(v)
 
         for v_in in body.variantes:
             if v_in.sku in existing_skus:
                 existing = existing_skus[v_in.sku]
                 existing.nombre = v_in.nombre
-                existing.precio = v_in.precio
-                existing.precio_comparativo = v_in.precio_comparativo
-                existing.activo = v_in.activo
+                if can_price:
+                    existing.precio = v_in.precio
+                    existing.precio_comparativo = v_in.precio_comparativo
+                    existing.activo = v_in.activo
             else:
+                v_data = v_in.model_dump()
+                if not can_price:
+                    v_data["precio"] = 0
+                    v_data["precio_comparativo"] = None
                 if db.scalar(select(Variante).where(Variante.sku == v_in.sku)):
                     raise HTTPException(
                         status.HTTP_409_CONFLICT, f"SKU ya existe: {v_in.sku}"
                     )
-                producto.variantes.append(Variante(**v_in.model_dump()))
+                producto.variantes.append(Variante(**v_data))
 
     if "imagenes" in changes and body.imagenes is not None:
         for img in list(producto.imagenes):
