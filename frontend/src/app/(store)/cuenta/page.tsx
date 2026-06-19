@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { Package, LogOut, BadgeCheck, ShieldAlert } from "lucide-react";
+import { Package, LogOut, BadgeCheck, ShieldAlert, Settings } from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,14 @@ export default function CuentaPage() {
           )}
         </div>
       </div>
+
+      {user.roles.some((r) => ["superadmin", "administrador", "vendedor"].includes(r)) && (
+        <Button asChild variant="default" className="w-full justify-start gap-2">
+          <Link href="/admin">
+            <Settings className="size-4" /> Panel de administración
+          </Link>
+        </Button>
+      )}
 
       <Button asChild variant="outline" className="w-full justify-start gap-2">
         <Link href="/cuenta/pedidos">

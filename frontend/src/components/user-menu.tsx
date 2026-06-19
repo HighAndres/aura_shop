@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { CircleUserRound } from "lucide-react";
+import { CircleUserRound, Settings } from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
+
+const STAFF_ROLES = ["superadmin", "administrador", "vendedor"];
 
 export function UserMenu() {
   const { user, loading } = useAuth();
@@ -22,13 +24,24 @@ export function UserMenu() {
   }
 
   const nombre = user.nombre_completo?.split(" ")[0] ?? user.email.split("@")[0];
+  const isStaff = user.roles.some((r) => STAFF_ROLES.includes(r));
 
   return (
-    <Button asChild variant="ghost" size="sm" className="gap-1.5 font-medium">
-      <Link href="/cuenta" aria-label="Mi cuenta">
-        <CircleUserRound className="size-5" />
-        <span className="hidden max-w-24 truncate sm:inline">{nombre}</span>
-      </Link>
-    </Button>
+    <>
+      {isStaff && (
+        <Button asChild variant="ghost" size="sm" className="gap-1.5 font-medium">
+          <Link href="/admin">
+            <Settings className="size-4" />
+            <span className="hidden sm:inline">Admin</span>
+          </Link>
+        </Button>
+      )}
+      <Button asChild variant="ghost" size="sm" className="gap-1.5 font-medium">
+        <Link href="/cuenta" aria-label="Mi cuenta">
+          <CircleUserRound className="size-5" />
+          <span className="hidden max-w-24 truncate sm:inline">{nombre}</span>
+        </Link>
+      </Button>
+    </>
   );
 }
