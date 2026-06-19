@@ -226,8 +226,8 @@ export default function AdminProductosPage() {
         slug,
         descripcion: descripcion || null,
         descripcion_corta: descripcionCorta || null,
-        marca_id: marcaId || null,
-        categoria_id: categoriaId || null,
+        marca_id: marcaId && marcaId !== "none" ? marcaId : null,
+        categoria_id: categoriaId && categoriaId !== "none" ? categoriaId : null,
         destacado,
         variantes: variantes.map((v) => ({
           sku: v.sku,

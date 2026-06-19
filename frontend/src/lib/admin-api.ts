@@ -32,7 +32,16 @@ export async function adminFetch<T>(
     let detail = res.statusText;
     try {
       const body = await res.json();
-      detail = body?.detail ?? detail;
+      const d = body?.detail;
+      if (typeof d === "string") {
+        detail = d;
+      } else if (Array.isArray(d)) {
+        detail = d.map((e: { msg?: string; loc?: string[] }) =>
+          e.msg ? `${(e.loc ?? []).slice(-1).join(".")}: ${e.msg}` : JSON.stringify(e)
+        ).join("; ");
+      } else if (d) {
+        detail = JSON.stringify(d);
+      }
     } catch {
       /* sin cuerpo */
     }
