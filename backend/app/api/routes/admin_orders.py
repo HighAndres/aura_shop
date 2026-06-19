@@ -11,6 +11,17 @@ from app.models.order import EstadoPedido, Pedido
 from app.models.user import Usuario
 from app.schemas.order import PedidoRead
 
+ADMIN_ROLES = {"superadmin", "administrador"}
+
+
+def _serialize_pedido(pedido: Pedido, db: Session) -> PedidoRead:
+    data = PedidoRead.model_validate(pedido)
+    if pedido.asignado_a:
+        asignado = db.get(Usuario, pedido.asignado_a)
+        if asignado:
+            data.asignado_a_nombre = asignado.nombre_completo or asignado.email
+    return data
+
 router = APIRouter(prefix="/admin/orders", tags=["admin-orders"])
 
 TRANSICIONES_VALIDAS: dict[str, list[str]] = {
@@ -67,7 +78,7 @@ def listar_pedidos_admin(
     ).all()
 
     return PedidoPage(
-        items=[PedidoRead.model_validate(p) for p in pedidos],
+        items=[_serialize_pedido(p, db) for p in pedidos],
         total=total,
         limit=limit,
         offset=offset,
@@ -121,7 +132,7 @@ def cambiar_estado(
         request=request,
     )
 
-    return PedidoRead.model_validate(pedido)
+    return _serialize_pedido(pedido, db)
 
 
 @router.put(
@@ -162,4 +173,57 @@ def cancelar_pedido(
         request=request,
     )
 
-    return PedidoRead.model_validate(pedido)
+    return _serialize_pedido(pedido, db)
+
+
+class ReasignarIn(BaseModel):
+    asignado_a: str | None = None
+
+
+@router.put(
+    "/{numero}/asignar",
+    response_model=PedidoRead,
+    summary="Reasignar pedido a otro usuario staff",
+)
+def reasignar_pedido(
+    numero: str,
+    body: ReasignarIn,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_permissions("pedidos.editar")),
+) -> PedidoRead:
+    if not ({r.nombre for r in current_user.roles} & ADMIN_ROLES):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Solo administradores pueden reasignar pedidos",
+        )
+
+    pedido = db.scalar(select(Pedido).where(Pedido.numero == numero))
+    if pedido is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Pedido no encontrado")
+
+    anterior = pedido.asignado_a
+
+    if body.asignado_a:
+        target = db.get(Usuario, body.asignado_a)
+        if target is None:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Usuario no encontrado")
+        pedido.asignado_a = target.id
+    else:
+        pedido.asignado_a = None
+
+    db.commit()
+    db.refresh(pedido)
+
+    audit.registrar(
+        db,
+        actor=current_user,
+        accion="pedidos.editar",
+        descripcion=f"Pedido {numero} reasignado",
+        entidad="pedido",
+        entidad_id=numero,
+        cambios={"asignado_anterior": str(anterior), "asignado_nuevo": str(pedido.asignado_a)},
+        request=request,
+    )
+
+    return _serialize_pedido(pedido, db)

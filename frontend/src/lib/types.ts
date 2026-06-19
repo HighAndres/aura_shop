@@ -136,6 +136,8 @@ export interface Pedido {
   total: string;
   requiere_factura: boolean;
   rfc: string | null;
+  asignado_a: string | null;
+  asignado_a_nombre: string | null;
   items: PedidoItem[];
   created_at: string;
 }
@@ -285,6 +287,42 @@ export interface UsuarioPage {
 export interface RolInfo {
   nombre: string;
   descripcion: string | null;
+}
+
+// --- Admin Paquetes ---
+
+export interface PaqueteItemAdmin {
+  id: string;
+  producto_id: string;
+  variante_id: string | null;
+  cantidad: number;
+  orden: number;
+  producto_nombre: string | null;
+  variante_sku: string | null;
+  precio_unitario: string | null;
+}
+
+export interface PaqueteAdmin {
+  id: string;
+  nombre: string;
+  slug: string;
+  descripcion: string | null;
+  descripcion_corta: string | null;
+  imagen_url: string | null;
+  precio_paquete: string;
+  precio_individual: string;
+  ahorro: string;
+  activo: boolean;
+  destacado: boolean;
+  items: PaqueteItemAdmin[];
+  created_at: string | null;
+}
+
+export interface PaqueteAdminPage {
+  items: PaqueteAdmin[];
+  total: number;
+  limit: number;
+  offset: number;
 }
 
 // --- Admin Reportes ---

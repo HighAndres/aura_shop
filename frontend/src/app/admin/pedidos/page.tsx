@@ -8,6 +8,7 @@ import { useAuth } from "@/components/auth-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -31,7 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { adminFetch } from "@/lib/admin-api";
 import { formatMXN } from "@/lib/format";
-import type { Pedido, PedidoPage } from "@/lib/types";
+import type { Pedido, PedidoPage, Usuario } from "@/lib/types";
 
 const ESTADOS = ["", "pendiente", "pagado", "enviado", "entregado", "cancelado"];
 
@@ -66,11 +67,15 @@ export default function AdminPedidosPage() {
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<Pedido | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [staffUsers, setStaffUsers] = useState<Usuario[]>([]);
 
   const canEdit = user?.roles.some((r) =>
     ["superadmin", "administrador", "vendedor"].includes(r),
   );
   const canCancel = user?.roles.some((r) =>
+    ["superadmin", "administrador"].includes(r),
+  );
+  const canAssign = user?.roles.some((r) =>
     ["superadmin", "administrador"].includes(r),
   );
 
@@ -98,6 +103,19 @@ export default function AdminPedidosPage() {
     fetchPedidos();
   }, [fetchPedidos]);
 
+  useEffect(() => {
+    if (!canAssign) return;
+    adminFetch<{ items: Usuario[] }>("/admin/users?limit=200")
+      .then((data) => {
+        setStaffUsers(
+          data.items.filter((u) =>
+            u.roles.some((r) => ["superadmin", "administrador", "vendedor"].includes(r)),
+          ),
+        );
+      })
+      .catch(() => setStaffUsers([]));
+  }, [canAssign]);
+
   async function cambiarEstado(numero: string, estado: string) {
     setUpdating(true);
     try {
@@ -113,6 +131,22 @@ export default function AdminPedidosPage() {
       setSelected(null);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Error al actualizar");
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  async function reasignar(numero: string, asignadoA: string | null) {
+    setUpdating(true);
+    try {
+      const res = await adminFetch<Pedido>(`/admin/orders/${numero}/asignar`, {
+        method: "PUT",
+        body: JSON.stringify({ asignado_a: asignadoA }),
+      });
+      setSelected(res);
+      await fetchPedidos();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error al reasignar");
     } finally {
       setUpdating(false);
     }
@@ -169,6 +203,7 @@ export default function AdminPedidosPage() {
               <TableHead>Email</TableHead>
               <TableHead>Contacto</TableHead>
               <TableHead>Estado</TableHead>
+              <TableHead>Asignado a</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead>Fecha</TableHead>
             </TableRow>
@@ -176,13 +211,13 @@ export default function AdminPedidosPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   Cargando...
                 </TableCell>
               </TableRow>
             ) : !data || data.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   No se encontraron pedidos
                 </TableCell>
               </TableRow>
@@ -203,6 +238,9 @@ export default function AdminPedidosPage() {
                     >
                       {p.estado}
                     </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {p.asignado_a_nombre ?? "—"}
                   </TableCell>
                   <TableCell className="text-right font-mono text-sm">
                     {formatMXN(p.total)}
@@ -274,6 +312,10 @@ export default function AdminPedidosPage() {
                   <p className="text-muted-foreground">Fecha</p>
                   <p>{new Date(selected.created_at).toLocaleString("es-MX")}</p>
                 </div>
+                <div>
+                  <p className="text-muted-foreground">Asignado a</p>
+                  <p>{selected.asignado_a_nombre ?? "Sin asignar"}</p>
+                </div>
                 {selected.requiere_factura && (
                   <div className="col-span-2">
                     <p className="text-muted-foreground">Facturación</p>
@@ -321,6 +363,35 @@ export default function AdminPedidosPage() {
                   <span className="font-mono">{formatMXN(selected.total)}</span>
                 </div>
               </div>
+
+              {/* Reasignar */}
+              {canAssign && (
+                <div>
+                  <Label className="text-sm font-medium">Reasignar pedido</Label>
+                  <Select
+                    value={selected.asignado_a ?? "sin-asignar"}
+                    onValueChange={(v) =>
+                      reasignar(selected.numero, v === "sin-asignar" ? null : v)
+                    }
+                    disabled={updating}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Sin asignar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sin-asignar">Sin asignar</SelectItem>
+                      {staffUsers.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.nombre_completo || u.email}
+                          <span className="ml-1 text-xs text-muted-foreground capitalize">
+                            ({u.roles[0]})
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Acciones de estado */}
               {(() => {

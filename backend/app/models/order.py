@@ -42,6 +42,9 @@ class Pedido(UUIDPKMixin, TimestampMixin, OdooSyncMixin, Base):
     usuario_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("usuarios.id", ondelete="SET NULL"), index=True
     )
+    asignado_a: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("usuarios.id", ondelete="SET NULL"), index=True
+    )
     email: Mapped[str] = mapped_column(String(320), nullable=False)
     estado: Mapped[str] = mapped_column(
         String(20), default="pendiente", server_default="pendiente", nullable=False

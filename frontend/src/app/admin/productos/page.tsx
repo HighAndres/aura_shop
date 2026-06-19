@@ -219,6 +219,20 @@ export default function AdminProductosPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!nombre.trim() || !slug.trim()) {
+      setFormTab("general");
+      alert("Nombre y slug son obligatorios");
+      return;
+    }
+
+    const emptySkuIdx = variantes.findIndex((v) => !v.sku.trim());
+    if (emptySkuIdx !== -1) {
+      setFormTab("variantes");
+      alert(`El SKU de la variante ${emptySkuIdx + 1} es obligatorio`);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload = {
@@ -226,8 +240,8 @@ export default function AdminProductosPage() {
         slug,
         descripcion: descripcion || null,
         descripcion_corta: descripcionCorta || null,
-        marca_id: marcaId || null,
-        categoria_id: categoriaId || null,
+        marca_id: marcaId && marcaId !== "none" ? marcaId : null,
+        categoria_id: categoriaId && categoriaId !== "none" ? categoriaId : null,
         destacado,
         variantes: variantes.map((v) => ({
           sku: v.sku,
@@ -584,7 +598,17 @@ export default function AdminProductosPage() {
                       value={nombre}
                       onChange={(e) => {
                         setNombre(e.target.value);
-                        if (!editingId) setSlug(slugify(e.target.value));
+                        if (!editingId) {
+                      const newSlug = slugify(e.target.value);
+                      setSlug(newSlug);
+                      setVariantes((prev) =>
+                        prev.map((v, i) =>
+                          i === 0 && !v.sku
+                            ? { ...v, sku: newSlug.toUpperCase().slice(0, 30) || "" }
+                            : v,
+                        ),
+                      );
+                    }
                       }}
                     />
                   </div>
@@ -780,7 +804,12 @@ export default function AdminProductosPage() {
                   variant="outline"
                   size="sm"
                   onClick={() =>
-                    setVariantes((prev) => [...prev, emptyVariante()])
+                    setVariantes((prev) => {
+                      const base = slug.toUpperCase().slice(0, 25);
+                      const newVar = emptyVariante();
+                      if (base) newVar.sku = `${base}-${prev.length + 1}`;
+                      return [...prev, newVar];
+                    })
                   }
                 >
                   <Plus className="mr-1 h-4 w-4" />
