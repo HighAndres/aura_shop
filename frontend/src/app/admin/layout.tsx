@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import {
   LayoutDashboard,
   Package,
+  Gift,
   Warehouse,
   ShoppingCart,
   Users,
@@ -43,6 +44,12 @@ const NAV_ITEMS: NavItem[] = [
     label: "Productos",
     icon: Package,
     roles: ["superadmin", "administrador", "vendedor"],
+  },
+  {
+    href: "/admin/paquetes",
+    label: "Paquetes",
+    icon: Gift,
+    roles: ["superadmin", "administrador"],
   },
   {
     href: "/admin/pedidos",

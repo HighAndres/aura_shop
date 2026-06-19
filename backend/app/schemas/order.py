@@ -69,5 +69,7 @@ class PedidoRead(BaseModel):
     subtotal: Decimal
     envio: Decimal
     total: Decimal
+    asignado_a: uuid.UUID | None = None
+    asignado_a_nombre: str | None = None
     items: list[PedidoItemRead] = []
     created_at: datetime
