@@ -126,10 +126,16 @@ export interface Pedido {
   email: string;
   estado: string;
   nombre_contacto: string;
+  telefono: string | null;
+  direccion_calle: string | null;
+  direccion_ciudad: string | null;
+  direccion_estado: string | null;
+  direccion_cp: string | null;
   subtotal: string;
   envio: string;
   total: string;
   requiere_factura: boolean;
+  rfc: string | null;
   items: PedidoItem[];
   created_at: string;
 }
@@ -149,4 +155,162 @@ export interface CheckoutPayload {
   regimen_fiscal?: string;
   uso_cfdi?: string;
   cp_fiscal?: string;
+}
+
+// --- Admin ---
+
+export interface PedidoPage {
+  items: Pedido[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface StockItem {
+  sku: string;
+  producto: string;
+  almacen: string | null;
+  disponible: number;
+}
+
+export interface Almacen {
+  id: string;
+  nombre: string;
+  codigo: string;
+  activo: boolean;
+}
+
+export interface Movimiento {
+  id: string;
+  sku: string;
+  almacen: string;
+  tipo: string;
+  cantidad: number;
+  lote: string | null;
+  referencia: string | null;
+  nota: string | null;
+  fecha: string;
+}
+
+// --- Admin Catálogo ---
+
+export interface VarianteAdmin {
+  id: string;
+  sku: string;
+  nombre: string | null;
+  precio: string;
+  precio_comparativo: string | null;
+  activo: boolean;
+}
+
+export interface ImagenAdmin {
+  id: string;
+  url: string;
+  alt: string | null;
+  orden: number;
+  es_principal: boolean;
+}
+
+export interface ProductoAdmin {
+  id: string;
+  nombre: string;
+  slug: string;
+  descripcion: string | null;
+  descripcion_corta: string | null;
+  marca_id: string | null;
+  categoria_id: string | null;
+  activo: boolean;
+  destacado: boolean;
+  variantes: VarianteAdmin[];
+  imagenes: ImagenAdmin[];
+  created_at: string | null;
+}
+
+export interface ProductoAdminPage {
+  items: ProductoAdmin[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface MarcaAdmin {
+  id: string;
+  nombre: string;
+  slug: string;
+  descripcion: string | null;
+  logo_url: string | null;
+  activo: boolean;
+}
+
+export interface CategoriaAdmin {
+  id: string;
+  nombre: string;
+  slug: string;
+  descripcion: string | null;
+  parent_id: string | null;
+  orden: number;
+  activo: boolean;
+}
+
+export interface AuditoriaEntry {
+  id: string;
+  usuario_id: string | null;
+  actor_email: string | null;
+  actor_rol: string | null;
+  accion: string;
+  entidad: string | null;
+  entidad_id: string | null;
+  descripcion: string;
+  cambios: Record<string, unknown> | null;
+  ip: string | null;
+  created_at: string;
+}
+
+export interface AuditoriaPage {
+  items: AuditoriaEntry[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+// --- Admin Usuarios ---
+
+export interface UsuarioPage {
+  items: Usuario[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface RolInfo {
+  nombre: string;
+  descripcion: string | null;
+}
+
+// --- Admin Reportes ---
+
+export interface VentasDiarias {
+  fecha: string;
+  pedidos: number;
+  total: string;
+}
+
+export interface VentasResumen {
+  periodo_inicio: string;
+  periodo_fin: string;
+  total_pedidos: number;
+  total_ventas: string;
+  ticket_promedio: string;
+  por_estado: Record<string, number>;
+  productos_top: { nombre: string; cantidad: number; ingresos: string }[];
+  ventas_diarias: VentasDiarias[];
+}
+
+export interface InventarioResumen {
+  total_skus: number;
+  skus_con_stock: number;
+  skus_sin_stock: number;
+  valor_inventario: string;
+  movimientos_recientes: number;
+  stock_bajo: { sku: string; disponible: number }[];
 }
