@@ -11,6 +11,8 @@ import {
   ChevronRight,
   X,
   Star,
+  Lock,
+  Search,
 } from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
@@ -51,6 +53,7 @@ import type {
 } from "@/lib/types";
 
 const PAGE_SIZE = 20;
+const PRICE_ROLES = ["superadmin", "administrador"];
 
 interface VarianteForm {
   sku: string;
@@ -93,23 +96,20 @@ function slugify(text: string): string {
 
 export default function AdminProductosPage() {
   const { user } = useAuth();
-  const canCreate = user?.roles.some((r) =>
-    ["superadmin", "administrador"].includes(r),
-  );
-  const canEdit = user?.roles.some((r) =>
-    ["superadmin", "administrador"].includes(r),
-  );
-  const canDelete = user?.roles.some((r) => r === "superadmin");
+
+  const canPrice = user?.roles.some((r) => PRICE_ROLES.includes(r)) ?? false;
+  const canDelete = user?.roles.some((r) => r === "superadmin") ?? false;
+  const canManageCatalog = canPrice;
 
   const [data, setData] = useState<ProductoAdminPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState("");
   const [offset, setOffset] = useState(0);
+  const [filtroCategoria, setFiltroCategoria] = useState("");
 
   const [marcas, setMarcas] = useState<MarcaAdmin[]>([]);
   const [categorias, setCategorias] = useState<CategoriaAdmin[]>([]);
 
-  // Form state
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -125,7 +125,6 @@ export default function AdminProductosPage() {
   const [variantes, setVariantes] = useState<VarianteForm[]>([emptyVariante()]);
   const [imagenes, setImagenes] = useState<ImagenForm[]>([]);
 
-  // Marcas/categorías management
   const [showMarcas, setShowMarcas] = useState(false);
   const [showCategorias, setShowCategorias] = useState(false);
   const [newMarcaNombre, setNewMarcaNombre] = useState("");
@@ -138,6 +137,7 @@ export default function AdminProductosPage() {
       params.set("limit", String(PAGE_SIZE));
       params.set("offset", String(offset));
       if (busqueda) params.set("q", busqueda);
+      if (filtroCategoria) params.set("categoria_id", filtroCategoria);
 
       const page = await adminFetch<ProductoAdminPage>(
         `/admin/catalog/productos?${params.toString()}`,
@@ -148,7 +148,7 @@ export default function AdminProductosPage() {
     } finally {
       setLoading(false);
     }
-  }, [offset, busqueda]);
+  }, [offset, busqueda, filtroCategoria]);
 
   const fetchCatalogData = useCallback(async () => {
     try {
@@ -232,7 +232,7 @@ export default function AdminProductosPage() {
         variantes: variantes.map((v) => ({
           sku: v.sku,
           nombre: v.nombre || null,
-          precio: v.precio,
+          precio: v.precio || "0",
           precio_comparativo: v.precio_comparativo || null,
           activo: v.activo,
         })),
@@ -351,9 +351,11 @@ export default function AdminProductosPage() {
   const categoriaNombre = (id: string | null) =>
     categorias.find((c) => c.id === id)?.nombre ?? "—";
 
+  const categoriasActivas = categorias.filter((c) => c.activo);
+
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Productos</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -361,7 +363,7 @@ export default function AdminProductosPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          {canCreate && (
+          {canManageCatalog && (
             <>
               <Button variant="outline" size="sm" onClick={() => setShowMarcas(true)}>
                 Marcas
@@ -369,26 +371,42 @@ export default function AdminProductosPage() {
               <Button variant="outline" size="sm" onClick={() => setShowCategorias(true)}>
                 Categorías
               </Button>
-              <Button size="sm" onClick={openCreate}>
-                <Plus className="mr-1 h-4 w-4" />
-                Producto
-              </Button>
             </>
           )}
+          <Button size="sm" onClick={openCreate}>
+            <Plus className="mr-1 h-4 w-4" />
+            Producto
+          </Button>
         </div>
       </div>
 
       {/* Filtros */}
-      <div className="mt-4 mb-3">
-        <Input
-          placeholder="Buscar por nombre..."
-          value={busqueda}
-          onChange={(e) => {
-            setBusqueda(e.target.value);
-            setOffset(0);
-          }}
-          className="max-w-xs"
-        />
+      <div className="mt-4 mb-3 flex flex-col gap-2 sm:flex-row">
+        <div className="relative max-w-xs">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nombre..."
+            value={busqueda}
+            onChange={(e) => {
+              setBusqueda(e.target.value);
+              setOffset(0);
+            }}
+            className="pl-8"
+          />
+        </div>
+        {categoriasActivas.length > 0 && (
+          <Select value={filtroCategoria} onValueChange={(v) => { setFiltroCategoria(v === "all" ? "" : v); setOffset(0); }}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Todas las categorías" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas las categorías</SelectItem>
+              {categoriasActivas.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {/* Tabla */}
@@ -402,7 +420,7 @@ export default function AdminProductosPage() {
               <TableHead>Variantes</TableHead>
               <TableHead>Precio desde</TableHead>
               <TableHead>Estado</TableHead>
-              {canEdit && <TableHead className="w-24">Acciones</TableHead>}
+              <TableHead className="w-24">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -446,7 +464,9 @@ export default function AdminProductosPage() {
                       {p.variantes.length}
                     </TableCell>
                     <TableCell className="text-sm font-mono">
-                      {precioDesde !== null ? formatMXN(precioDesde) : "—"}
+                      {precioDesde !== null && precioDesde > 0
+                        ? formatMXN(precioDesde)
+                        : <span className="text-amber-600 text-xs">Sin precio</span>}
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -454,51 +474,51 @@ export default function AdminProductosPage() {
                         className={
                           p.activo
                             ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
+                            : "bg-amber-100 text-amber-800"
                         }
                       >
-                        {p.activo ? "Activo" : "Inactivo"}
+                        {p.activo ? "Activo" : "Borrador"}
                       </Badge>
                     </TableCell>
-                    {canEdit && (
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => openEdit(p)}
-                            title="Editar"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => openEdit(p)}
+                          title="Editar"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        {canPrice && (
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
                             onClick={() => toggleActivo(p)}
-                            title={p.activo ? "Desactivar" : "Activar"}
+                            title={p.activo ? "Pasar a borrador" : "Publicar"}
                           >
                             {p.activo ? (
                               <ToggleRight className="h-4 w-4 text-green-600" />
                             ) : (
-                              <ToggleLeft className="h-4 w-4 text-red-600" />
+                              <ToggleLeft className="h-4 w-4 text-amber-600" />
                             )}
                           </Button>
-                          {canDelete && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive"
-                              onClick={() => eliminar(p)}
-                              title="Eliminar"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    )}
+                        )}
+                        {canDelete && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive"
+                            onClick={() => eliminar(p)}
+                            title="Eliminar"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 );
               })
@@ -622,13 +642,11 @@ export default function AdminProductosPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Sin categoría</SelectItem>
-                        {categorias
-                          .filter((c) => c.activo)
-                          .map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.nombre}
-                            </SelectItem>
-                          ))}
+                        {categoriasActivas.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.nombre}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -639,13 +657,28 @@ export default function AdminProductosPage() {
                     id="destacado"
                     checked={destacado}
                     onChange={(e) => setDestacado(e.target.checked)}
-                    className="h-4 w-4 rounded border-input"
+                    disabled={!canPrice}
+                    className="h-4 w-4 rounded border-input disabled:opacity-50"
                   />
-                  <Label htmlFor="destacado">Producto destacado</Label>
+                  <Label htmlFor="destacado" className={!canPrice ? "text-muted-foreground" : ""}>
+                    Producto destacado
+                  </Label>
+                  {!canPrice && <Lock className="h-3 w-3 text-muted-foreground" />}
                 </div>
+                {!canPrice && (
+                  <p className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+                    El producto se creará como borrador. Un administrador deberá asignar el precio y publicarlo.
+                  </p>
+                )}
               </TabsContent>
 
               <TabsContent value="variantes" className="space-y-4">
+                {!canPrice && (
+                  <p className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2 flex items-center gap-1.5">
+                    <Lock className="h-3 w-3" />
+                    Los campos de precio solo pueden ser editados por un administrador.
+                  </p>
+                )}
                 {variantes.map((v, idx) => (
                   <div
                     key={idx}
@@ -689,20 +722,26 @@ export default function AdminProductosPage() {
                         />
                       </div>
                       <div>
-                        <Label>Precio (MXN)</Label>
+                        <Label className={!canPrice ? "text-muted-foreground" : ""}>
+                          Precio (MXN) {!canPrice && <Lock className="inline h-3 w-3 ml-1" />}
+                        </Label>
                         <Input
                           type="number"
                           step="0.01"
                           min="0"
-                          required
-                          value={v.precio}
+                          required={canPrice}
+                          value={canPrice ? v.precio : v.precio || "0"}
                           onChange={(e) =>
                             updateVariante(idx, "precio", e.target.value)
                           }
+                          disabled={!canPrice}
+                          className={!canPrice ? "bg-muted" : ""}
                         />
                       </div>
                       <div>
-                        <Label>Precio comparativo</Label>
+                        <Label className={!canPrice ? "text-muted-foreground" : ""}>
+                          Precio comparativo {!canPrice && <Lock className="inline h-3 w-3 ml-1" />}
+                        </Label>
                         <Input
                           type="number"
                           step="0.01"
@@ -715,6 +754,8 @@ export default function AdminProductosPage() {
                               e.target.value,
                             )
                           }
+                          disabled={!canPrice}
+                          className={!canPrice ? "bg-muted" : ""}
                         />
                       </div>
                     </div>
@@ -725,9 +766,12 @@ export default function AdminProductosPage() {
                         onChange={(e) =>
                           updateVariante(idx, "activo", e.target.checked)
                         }
-                        className="h-4 w-4 rounded border-input"
+                        disabled={!canPrice}
+                        className="h-4 w-4 rounded border-input disabled:opacity-50"
                       />
-                      <span className="text-sm">Activa</span>
+                      <span className={`text-sm ${!canPrice ? "text-muted-foreground" : ""}`}>
+                        Activa
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -838,7 +882,7 @@ export default function AdminProductosPage() {
                   ? "Guardando..."
                   : editingId
                     ? "Guardar cambios"
-                    : "Crear producto"}
+                    : canPrice ? "Crear producto" : "Crear borrador"}
               </Button>
             </div>
           </form>
