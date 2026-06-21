@@ -13,15 +13,15 @@ export function ProductCard({ producto }: { producto: ProductoListItem }) {
       href={`/productos/${producto.slug}`}
       className="group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <Card className="h-full overflow-hidden transition-shadow group-hover:shadow-md">
-        <div className="relative aspect-square bg-muted">
+      <Card className="h-full overflow-hidden transition-all duration-300 group-hover:shadow-lg group-hover:-translate-y-1">
+        <div className="relative aspect-square bg-muted overflow-hidden">
           {producto.imagen ? (
             <Image
               src={producto.imagen}
               alt={producto.nombre}
               fill
               sizes="(max-width: 640px) 50vw, 240px"
-              className="object-cover transition-transform group-hover:scale-105"
+              className="object-cover transition-transform duration-500 group-hover:scale-110"
             />
           ) : (
             <div className="flex h-full items-center justify-center">
@@ -29,14 +29,15 @@ export function ProductCard({ producto }: { producto: ProductoListItem }) {
             </div>
           )}
           {producto.destacado ? (
-            <Badge className="absolute left-2 top-2">Destacado</Badge>
+            <Badge className="absolute left-2 top-2 shadow-sm">Destacado</Badge>
           ) : null}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
         </div>
         <CardContent className="space-y-1 p-3">
           {producto.marca ? (
             <p className="text-xs text-muted-foreground">{producto.marca}</p>
           ) : null}
-          <h3 className="line-clamp-2 text-sm font-medium leading-tight">
+          <h3 className="line-clamp-2 text-sm font-medium leading-tight group-hover:text-primary transition-colors">
             {producto.nombre}
           </h3>
           {producto.precio_desde ? (
