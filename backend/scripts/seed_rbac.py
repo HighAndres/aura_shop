@@ -59,6 +59,7 @@ ROLES: dict[str, dict] = {
             "productos.leer", "productos.crear", "productos.editar",
             "inventario.leer",
             "pedidos.leer", "pedidos.crear", "pedidos.editar",
+            "reportes.leer",
         ],
     },
     "cliente": {

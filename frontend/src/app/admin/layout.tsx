@@ -67,7 +67,7 @@ const NAV_ITEMS: NavItem[] = [
     href: "/admin/reportes",
     label: "Reportes",
     icon: BarChart3,
-    roles: ["superadmin", "administrador"],
+    roles: ["superadmin", "administrador", "vendedor"],
   },
   {
     href: "/admin/usuarios",
