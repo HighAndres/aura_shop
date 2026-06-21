@@ -4,6 +4,7 @@ const nextConfig = {
     remotePatterns: [
       // Imágenes de ejemplo del seed; reemplazar por el CDN/Odoo real luego.
       { protocol: "https", hostname: "picsum.photos" },
+      { protocol: "https", hostname: "images.unsplash.com" },
     ],
   },
 };
