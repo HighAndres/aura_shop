@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   ChevronLeft,
@@ -77,7 +77,7 @@ interface LineaPedido {
   cantidad: number;
 }
 
-export default function AdminPedidosPage() {
+function PedidosContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
 
@@ -901,5 +901,13 @@ export default function AdminPedidosPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function AdminPedidosPage() {
+  return (
+    <Suspense>
+      <PedidosContent />
+    </Suspense>
   );
 }

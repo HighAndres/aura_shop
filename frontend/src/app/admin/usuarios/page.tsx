@@ -172,7 +172,7 @@ export default function AdminUsuariosPage() {
       await adminFetch(`/admin/users/${u.id}/toggle`, { method: "PATCH" });
       fetchUsuarios();
     } catch {
-      /* silently fail */
+      alert("No se pudo cambiar el estado del usuario.");
     }
   }
 

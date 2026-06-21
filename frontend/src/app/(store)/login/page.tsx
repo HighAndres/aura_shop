@@ -27,7 +27,8 @@ function LoginForm() {
         String(fd.get("password")),
       );
       const next = searchParams.get("next");
-      router.push(next && next.startsWith("/") ? next : "/cuenta");
+      const safe = next && next.startsWith("/") && !next.startsWith("//");
+      router.push(safe ? next : "/cuenta");
     } catch {
       setError("Correo o contraseña incorrectos.");
       setEnviando(false);

@@ -87,7 +87,8 @@ def listar_paquetes(
     count_q = select(func.count()).select_from(Paquete)
 
     if q:
-        filtro = Paquete.nombre.ilike(f"%{q}%")
+        esc = q.replace("%", r"\%").replace("_", r"\_")
+        filtro = Paquete.nombre.ilike(f"%{esc}%")
         query = query.where(filtro)
         count_q = count_q.where(filtro)
     if activo is not None:

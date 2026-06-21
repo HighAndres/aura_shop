@@ -194,7 +194,8 @@ def listar_pedidos_admin(
         query = query.where(Pedido.estado == estado)
         count_query = count_query.where(Pedido.estado == estado)
     if q:
-        filtro = Pedido.numero.ilike(f"%{q}%") | Pedido.email.ilike(f"%{q}%")
+        esc = q.replace("%", r"\%").replace("_", r"\_")
+        filtro = Pedido.numero.ilike(f"%{esc}%") | Pedido.email.ilike(f"%{esc}%")
         query = query.where(filtro)
         count_query = count_query.where(filtro)
 

@@ -1,5 +1,7 @@
 """Endpoints administrativos de usuarios: CRUD y gestión de roles."""
 
+import uuid as _uuid
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import func, select
@@ -67,7 +69,8 @@ def listar_usuarios(
     count_q = select(func.count()).select_from(Usuario)
 
     if q:
-        filtro = Usuario.email.ilike(f"%{q}%") | Usuario.nombre_completo.ilike(f"%{q}%")
+        esc = q.replace("%", r"\%").replace("_", r"\_")
+        filtro = Usuario.email.ilike(f"%{esc}%") | Usuario.nombre_completo.ilike(f"%{esc}%")
         query = query.where(filtro)
         count_q = count_q.where(filtro)
     if activo is not None:
@@ -146,7 +149,7 @@ def crear_usuario(
     summary="Editar usuario",
 )
 def editar_usuario(
-    user_id: str,
+    user_id: _uuid.UUID,
     body: AdminUserUpdate,
     request: Request,
     db: Session = Depends(get_db),
@@ -157,15 +160,15 @@ def editar_usuario(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Usuario no encontrado")
 
     changes = body.model_dump(exclude_unset=True)
+    changes.pop("password", None)
 
     if "nombre_completo" in changes:
         user.nombre_completo = changes["nombre_completo"]
     if "telefono" in changes:
         user.telefono = changes["telefono"]
-    if "password" in changes:
-        if body.password:
-            user.hashed_password = hash_password(body.password)
-        changes.pop("password", None)
+    if body.password:
+        user.hashed_password = hash_password(body.password)
+        changes["password"] = "***"
     if "is_active" in changes:
         user.is_active = changes["is_active"]
     if "is_verified" in changes:
@@ -198,7 +201,7 @@ def editar_usuario(
     summary="Activar/desactivar usuario",
 )
 def toggle_usuario(
-    user_id: str,
+    user_id: _uuid.UUID,
     request: Request,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_permissions("usuarios.editar")),

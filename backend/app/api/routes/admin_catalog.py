@@ -210,7 +210,8 @@ def listar_productos_admin(
     count_q = select(func.count()).select_from(Producto)
 
     if q:
-        filtro = Producto.nombre.ilike(f"%{q}%") | Producto.slug.ilike(f"%{q}%")
+        esc = q.replace("%", r"\%").replace("_", r"\_")
+        filtro = Producto.nombre.ilike(f"%{esc}%") | Producto.slug.ilike(f"%{esc}%")
         query = query.where(filtro)
         count_q = count_q.where(filtro)
     if activo is not None:
