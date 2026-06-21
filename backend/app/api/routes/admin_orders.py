@@ -91,7 +91,9 @@ def crear_pedido_admin(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"No existe el almacén {ALMACEN_CHECKOUT}")
 
     variante_ids = [it.variante_id for it in body.items]
-    variantes = db.scalars(select(Variante).where(Variante.id.in_(variante_ids))).all()
+    variantes = db.scalars(
+        select(Variante).where(Variante.id.in_(variante_ids)).with_for_update()
+    ).all()
     variante_map = {str(v.id): v for v in variantes}
 
     for it in body.items:

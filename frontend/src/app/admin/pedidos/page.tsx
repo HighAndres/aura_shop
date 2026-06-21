@@ -91,6 +91,7 @@ function PedidosContent() {
   const [selected, setSelected] = useState<Pedido | null>(null);
   const [updating, setUpdating] = useState(false);
   const [staffUsers, setStaffUsers] = useState<Usuario[]>([]);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   /* ── Crear pedido ── */
   const [showCrear, setShowCrear] = useState(false);
@@ -268,6 +269,7 @@ function PedidosContent() {
 
   async function cambiarEstado(numero: string, estado: string) {
     setUpdating(true);
+    setErrorMsg(null);
     try {
       if (estado === "cancelado") {
         await adminFetch(`/admin/orders/${numero}/cancelar`, { method: "PUT" });
@@ -280,7 +282,7 @@ function PedidosContent() {
       await fetchPedidos();
       setSelected(null);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al actualizar");
+      setErrorMsg(err instanceof Error ? err.message : "Error al actualizar");
     } finally {
       setUpdating(false);
     }
@@ -288,6 +290,7 @@ function PedidosContent() {
 
   async function reasignar(numero: string, asignadoA: string | null) {
     setUpdating(true);
+    setErrorMsg(null);
     try {
       const res = await adminFetch<Pedido>(`/admin/orders/${numero}/asignar`, {
         method: "PUT",
@@ -296,7 +299,7 @@ function PedidosContent() {
       setSelected(res);
       await fetchPedidos();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error al reasignar");
+      setErrorMsg(err instanceof Error ? err.message : "Error al reasignar");
     } finally {
       setUpdating(false);
     }
@@ -443,13 +446,18 @@ function PedidosContent() {
       )}
 
       {/* ══════ Dialog DETALLE pedido ══════ */}
-      <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
+      <Dialog open={!!selected} onOpenChange={() => { setSelected(null); setErrorMsg(null); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Pedido {selected?.numero}</DialogTitle>
           </DialogHeader>
           {selected && (
             <div className="space-y-4">
+              {errorMsg && (
+                <p className="rounded-lg border border-destructive/40 bg-destructive/5 p-2.5 text-sm text-destructive">
+                  {errorMsg}
+                </p>
+              )}
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-muted-foreground">Email</p>

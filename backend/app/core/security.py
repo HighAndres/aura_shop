@@ -66,12 +66,17 @@ def create_email_verify_token(subject: str) -> str:
     )
 
 
-def create_password_reset_token(subject: str) -> str:
-    return _create_token(
-        subject,
-        PASSWORD_RESET_TOKEN_TYPE,
-        timedelta(minutes=settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES),
-    )
+def create_password_reset_token(subject: str, pwd_hash: str | None = None) -> str:
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": subject,
+        "type": PASSWORD_RESET_TOKEN_TYPE,
+        "iat": now,
+        "exp": now + timedelta(minutes=settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES),
+    }
+    if pwd_hash:
+        payload["phash"] = pwd_hash[:16]
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
 def create_magic_link_token(subject: str) -> str:

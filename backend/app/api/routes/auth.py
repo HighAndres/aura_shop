@@ -25,6 +25,7 @@ from app.core.security import (
     create_magic_link_token,
     create_password_reset_token,
     create_refresh_token,
+    decode_token,
     decode_token_of_type,
     verify_password,
 )
@@ -179,7 +180,7 @@ def forgot_password(
 ) -> MessageResponse:
     user = crud_user.get_by_email(db, body.email)
     if user and user.is_active:
-        token = create_password_reset_token(str(user.id))
+        token = create_password_reset_token(str(user.id), user.hashed_password)
         email_service.send_password_reset_email(user.email, token)
         _log_dev_token(token)
     return MessageResponse(message=_GENERIC_EMAIL_MSG)
@@ -194,9 +195,11 @@ def reset_password(
     body: ResetPasswordRequest, db: Session = Depends(get_db)
 ) -> MessageResponse:
     try:
-        sub = decode_token_of_type(body.token, PASSWORD_RESET_TOKEN_TYPE)
-        user_id = uuid.UUID(sub)
-    except (jwt.PyJWTError, ValueError):
+        payload = decode_token(body.token)
+        if payload.get("type") != PASSWORD_RESET_TOKEN_TYPE:
+            raise jwt.InvalidTokenError("Tipo incorrecto")
+        user_id = uuid.UUID(payload["sub"])
+    except (jwt.PyJWTError, ValueError, KeyError):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Token inválido o expirado",
@@ -205,6 +208,12 @@ def reset_password(
     if user is None or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Token inválido"
+        )
+    phash = payload.get("phash")
+    if phash and user.hashed_password and not user.hashed_password.startswith(phash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Este enlace ya fue utilizado",
         )
     crud_user.set_password(db, user, body.new_password)
     return MessageResponse(message="Contraseña actualizada. Ya puedes iniciar sesión.")
