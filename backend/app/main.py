@@ -11,8 +11,8 @@ def create_app() -> FastAPI:
         title=settings.PROJECT_NAME,
         description="Sistema desarrollado por mirmibug.",
         debug=settings.DEBUG,
-        openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
-        docs_url="/docs",
+        openapi_url=f"{settings.API_V1_PREFIX}/openapi.json" if settings.DEBUG else None,
+        docs_url="/docs" if settings.DEBUG else None,
     )
 
     if settings.BACKEND_CORS_ORIGINS:

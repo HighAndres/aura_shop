@@ -15,9 +15,15 @@ export default function RecuperarPage() {
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setEnviando(true);
-    const fd = new FormData(e.currentTarget);
-    await forgotPassword(String(fd.get("email")).trim());
-    setEnviado(true);
+    try {
+      const fd = new FormData(e.currentTarget);
+      await forgotPassword(String(fd.get("email")).trim());
+      setEnviado(true);
+    } catch {
+      setEnviado(true);
+    } finally {
+      setEnviando(false);
+    }
   }
 
   if (enviado) {

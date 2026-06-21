@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { CartButton } from "@/components/cart-button";
+import { SearchBar } from "@/components/search-bar";
 import { UserMenu } from "@/components/user-menu";
 
 export function SiteHeader() {
@@ -20,7 +21,8 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-1 sm:gap-2">
+          <SearchBar />
           <Button asChild variant="ghost" size="sm" className="font-medium">
             <Link href="/productos">Productos</Link>
           </Button>

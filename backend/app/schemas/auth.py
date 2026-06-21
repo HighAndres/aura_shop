@@ -4,10 +4,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 
 class MessageResponse(BaseModel):
-    """Respuesta genérica. `dev_token` solo se rellena en modo desarrollo."""
-
     message: str
-    dev_token: str | None = None
 
 
 class EmailRequest(BaseModel):

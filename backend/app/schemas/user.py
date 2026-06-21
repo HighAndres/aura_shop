@@ -18,8 +18,22 @@ class UserLogin(BaseModel):
     password: str
 
 
+class UserPublicRead(BaseModel):
+    """Lo que ve un cliente normal — sin roles ni info interna."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    email: EmailStr
+    nombre_completo: str | None
+    telefono: str | None
+    is_active: bool
+    is_verified: bool
+    created_at: datetime
+
+
 class UserRead(BaseModel):
-    """Representación pública de un usuario (sin contraseña)."""
+    """Representación completa (solo para endpoints admin)."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -35,7 +49,6 @@ class UserRead(BaseModel):
     @field_validator("roles", mode="before")
     @classmethod
     def _roles_a_nombres(cls, v: object) -> list[str]:
-        """Convierte objetos Rol del ORM en una lista de nombres."""
         if isinstance(v, list):
             return [r if isinstance(r, str) else r.nombre for r in v]
         return v

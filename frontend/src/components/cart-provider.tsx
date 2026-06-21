@@ -43,16 +43,31 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   const add = useCallback(async (sku: string, cantidad = 1) => {
-    setCart(await api.addToCart(sku, cantidad));
-  }, []);
+    try {
+      setCart(await api.addToCart(sku, cantidad));
+    } catch {
+      await refresh();
+      throw new Error("No se pudo agregar al carrito");
+    }
+  }, [refresh]);
 
   const setQty = useCallback(async (sku: string, cantidad: number) => {
-    setCart(await api.updateCartItem(sku, cantidad));
-  }, []);
+    try {
+      setCart(await api.updateCartItem(sku, cantidad));
+    } catch {
+      await refresh();
+      throw new Error("No se pudo actualizar la cantidad");
+    }
+  }, [refresh]);
 
   const remove = useCallback(async (sku: string) => {
-    setCart(await api.removeCartItem(sku));
-  }, []);
+    try {
+      setCart(await api.removeCartItem(sku));
+    } catch {
+      await refresh();
+      throw new Error("No se pudo eliminar el producto");
+    }
+  }, [refresh]);
 
   const clear = useCallback(() => setCart(null), []);
 

@@ -1,3 +1,4 @@
+import { Package } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -22,7 +23,11 @@ export function ProductCard({ producto }: { producto: ProductoListItem }) {
               sizes="(max-width: 640px) 50vw, 240px"
               className="object-cover transition-transform group-hover:scale-105"
             />
-          ) : null}
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <Package className="h-10 w-10 text-muted-foreground/40" />
+            </div>
+          )}
           {producto.destacado ? (
             <Badge className="absolute left-2 top-2">Destacado</Badge>
           ) : null}
@@ -38,7 +43,9 @@ export function ProductCard({ producto }: { producto: ProductoListItem }) {
             <p className="pt-1 text-sm font-semibold">
               desde {formatMXN(producto.precio_desde)}
             </p>
-          ) : null}
+          ) : (
+            <p className="pt-1 text-sm text-muted-foreground">Consultar precio</p>
+          )}
         </CardContent>
       </Card>
     </Link>

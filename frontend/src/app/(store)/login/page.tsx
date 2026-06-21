@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -25,7 +26,8 @@ export default function LoginPage() {
         String(fd.get("email")).trim(),
         String(fd.get("password")),
       );
-      router.push("/cuenta");
+      const next = searchParams.get("next");
+      router.push(next && next.startsWith("/") ? next : "/cuenta");
     } catch {
       setError("Correo o contraseña incorrectos.");
       setEnviando(false);

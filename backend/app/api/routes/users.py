@@ -7,16 +7,16 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_active_user, require_permissions
 from app.db.session import get_db
 from app.models.user import Usuario
-from app.schemas.user import UserRead
+from app.schemas.user import UserPublicRead, UserRead
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.get("/me", response_model=UserRead, summary="Perfil del usuario actual")
+@router.get("/me", response_model=UserPublicRead, summary="Perfil del usuario actual")
 def read_me(
     current_user: Usuario = Depends(get_current_active_user),
-) -> UserRead:
-    return UserRead.model_validate(current_user)
+) -> UserPublicRead:
+    return UserPublicRead.model_validate(current_user)
 
 
 @router.get(

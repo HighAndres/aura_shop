@@ -162,15 +162,21 @@ def editar_usuario(
         user.nombre_completo = changes["nombre_completo"]
     if "telefono" in changes:
         user.telefono = changes["telefono"]
-    if "password" in changes and body.password:
-        user.hashed_password = hash_password(body.password)
-        del changes["password"]
+    if "password" in changes:
+        if body.password:
+            user.hashed_password = hash_password(body.password)
+        changes.pop("password", None)
     if "is_active" in changes:
         user.is_active = changes["is_active"]
     if "is_verified" in changes:
         user.is_verified = changes["is_verified"]
 
     if "roles" in changes and body.roles is not None:
+        if str(user.id) == str(current_user.id):
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "No puedes modificar tus propios roles",
+            )
         roles = db.scalars(select(Rol).where(Rol.nombre.in_(body.roles))).all()
         user.roles = list(roles)
 

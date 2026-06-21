@@ -18,8 +18,19 @@ export default function AvisoPrivacidadPage() {
       </p>
       <p className="text-sm leading-relaxed text-muted-foreground">
         Puedes ejercer tus derechos ARCO (acceso, rectificación, cancelación y
-        oposición) escribiéndonos. Este texto es un borrador y será reemplazado
-        por el aviso de privacidad definitivo.
+        oposición) escribiéndonos a{" "}
+        <a href="mailto:privacidad@aura-belleza.com" className="underline">
+          privacidad@aura-belleza.com
+        </a>
+        .
+      </p>
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        Nos reservamos el derecho de actualizar este aviso de privacidad en
+        cualquier momento. La versión vigente estará siempre disponible en esta
+        página.
+      </p>
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        Última actualización: junio 2026.
       </p>
     </article>
   );

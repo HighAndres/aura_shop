@@ -39,7 +39,7 @@ from app.schemas.auth import (
     TokenRequest,
 )
 from app.schemas.token import RefreshRequest, Token
-from app.schemas.user import UserCreate, UserRead
+from app.schemas.user import UserCreate, UserPublicRead
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -57,31 +57,32 @@ def _tokens_for(user_id: uuid.UUID) -> Token:
     )
 
 
-def _dev_token(token: str) -> str | None:
-    """Expone el token en la respuesta solo en desarrollo, para pruebas."""
-    return token if settings.DEBUG else None
+def _log_dev_token(token: str) -> None:
+    """En desarrollo, imprime el token en los logs (nunca en la respuesta HTTP)."""
+    if settings.DEBUG:
+        import logging
+        logging.getLogger(__name__).debug("DEV token: %s", token)
 
 
 # --- Registro / login / refresh ---
 
 @router.post(
     "/register",
-    response_model=UserRead,
+    response_model=UserPublicRead,
     status_code=status.HTTP_201_CREATED,
     summary="Registrar usuario con email y contraseña",
 )
-def register(data: UserCreate, db: Session = Depends(get_db)) -> UserRead:
+def register(data: UserCreate, db: Session = Depends(get_db)) -> UserPublicRead:
     if crud_user.get_by_email(db, data.email):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="El correo ya está registrado",
         )
     user = crud_user.create(db, data, role_name=settings.DEFAULT_USER_ROLE)
-    # Enviar verificación de correo (en dev se registra en consola).
     email_service.send_verification_email(
         user.email, create_email_verify_token(str(user.id))
     )
-    return UserRead.model_validate(user)
+    return UserPublicRead.model_validate(user)
 
 
 @router.post("/login", response_model=Token, summary="Iniciar sesión")
@@ -159,12 +160,11 @@ def resend_verification(
     body: EmailRequest, db: Session = Depends(get_db)
 ) -> MessageResponse:
     user = crud_user.get_by_email(db, body.email)
-    dev = None
     if user and not user.is_verified:
         token = create_email_verify_token(str(user.id))
         email_service.send_verification_email(user.email, token)
-        dev = _dev_token(token)
-    return MessageResponse(message=_GENERIC_EMAIL_MSG, dev_token=dev)
+        _log_dev_token(token)
+    return MessageResponse(message=_GENERIC_EMAIL_MSG)
 
 
 # --- Recuperación / cambio de contraseña ---
@@ -178,12 +178,11 @@ def forgot_password(
     body: EmailRequest, db: Session = Depends(get_db)
 ) -> MessageResponse:
     user = crud_user.get_by_email(db, body.email)
-    dev = None
     if user and user.is_active:
         token = create_password_reset_token(str(user.id))
         email_service.send_password_reset_email(user.email, token)
-        dev = _dev_token(token)
-    return MessageResponse(message=_GENERIC_EMAIL_MSG, dev_token=dev)
+        _log_dev_token(token)
+    return MessageResponse(message=_GENERIC_EMAIL_MSG)
 
 
 @router.post(
@@ -246,12 +245,11 @@ def request_magic_link(
     body: EmailRequest, db: Session = Depends(get_db)
 ) -> MessageResponse:
     user = crud_user.get_by_email(db, body.email)
-    dev = None
     if user and user.is_active:
         token = create_magic_link_token(str(user.id))
         email_service.send_magic_link_email(user.email, token)
-        dev = _dev_token(token)
-    return MessageResponse(message=_GENERIC_EMAIL_MSG, dev_token=dev)
+        _log_dev_token(token)
+    return MessageResponse(message=_GENERIC_EMAIL_MSG)
 
 
 @router.post(

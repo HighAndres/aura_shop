@@ -45,8 +45,8 @@ export default async function ProductosPage({ searchParams }: PageProps) {
 
       {errorApi ? (
         <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-          No pudimos cargar el catálogo. ¿Está corriendo el backend en{" "}
-          <code className="text-foreground">:8000</code>?
+          No pudimos cargar los productos en este momento. Intenta de nuevo
+          más tarde.
         </p>
       ) : items.length === 0 ? (
         <p className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">

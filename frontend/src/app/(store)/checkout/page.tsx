@@ -120,19 +120,19 @@ export default function CheckoutPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-1 text-sm sm:col-span-2">
                 <span>Calle y número</span>
-                <Input name="direccion_calle" autoComplete="street-address" />
+                <Input name="direccion_calle" autoComplete="street-address" required />
               </label>
               <label className="space-y-1 text-sm">
                 <span>Ciudad</span>
-                <Input name="direccion_ciudad" />
+                <Input name="direccion_ciudad" required />
               </label>
               <label className="space-y-1 text-sm">
                 <span>Estado</span>
-                <Input name="direccion_estado" />
+                <Input name="direccion_estado" required />
               </label>
               <label className="space-y-1 text-sm">
                 <span>Código postal</span>
-                <Input name="direccion_cp" inputMode="numeric" />
+                <Input name="direccion_cp" inputMode="numeric" required />
               </label>
             </div>
             <label className="space-y-1 text-sm">
@@ -211,7 +211,8 @@ export default function CheckoutPage() {
             {enviando ? <Loader2 className="animate-spin" /> : "Confirmar pedido"}
           </Button>
           <p className="text-center text-xs text-muted-foreground">
-            El cobro real se integra después (pasarela de pago).
+            Al confirmar aceptas nuestros{" "}
+            <a href="/terminos" className="underline">términos y condiciones</a>.
           </p>
         </aside>
       </form>

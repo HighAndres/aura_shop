@@ -96,7 +96,7 @@ def require_permissions(*codes: str) -> Callable[[Usuario], Usuario]:
         if faltantes:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Permisos insuficientes: {', '.join(sorted(faltantes))}",
+                detail="No tienes permisos para realizar esta acción",
             )
         return current_user
 
