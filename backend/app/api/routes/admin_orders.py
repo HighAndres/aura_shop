@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import require_permissions
 from app.core import audit
+from app.crud.order import restaurar_inventario
 from app.db.session import get_db
 from app.models.order import EstadoPedido, Pedido
 from app.models.user import Usuario
@@ -159,6 +160,7 @@ def cancelar_pedido(
 
     estado_anterior = pedido.estado
     pedido.estado = "cancelado"
+    restaurar_inventario(db, pedido)
     db.commit()
     db.refresh(pedido)
 
@@ -166,7 +168,7 @@ def cancelar_pedido(
         db,
         actor=current_user,
         accion="pedidos.cancelar",
-        descripcion=f"Pedido {numero} cancelado (era: {estado_anterior})",
+        descripcion=f"Pedido {numero} cancelado (era: {estado_anterior}), inventario restaurado",
         entidad="pedido",
         entidad_id=numero,
         cambios={"estado_anterior": estado_anterior, "estado_nuevo": "cancelado"},

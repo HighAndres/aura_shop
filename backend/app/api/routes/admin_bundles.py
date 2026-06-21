@@ -29,8 +29,9 @@ def _calc_precio_individual(items: list[PaqueteItem]) -> Decimal:
         if item.variante:
             total += item.variante.precio * item.cantidad
         elif item.producto and item.producto.variantes:
-            precio_min = min(v.precio for v in item.producto.variantes if v.activo)
-            total += precio_min * item.cantidad
+            activas = [v.precio for v in item.producto.variantes if v.activo]
+            if activas:
+                total += min(activas) * item.cantidad
     return total
 
 
@@ -138,8 +139,12 @@ def crear_paquete(
     for item in body.items:
         if not db.get(Producto, str(item.producto_id)):
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Producto no encontrado: {item.producto_id}")
-        if item.variante_id and not db.get(Variante, str(item.variante_id)):
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Variante no encontrada: {item.variante_id}")
+        if item.variante_id:
+            variante = db.get(Variante, str(item.variante_id))
+            if not variante:
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Variante no encontrada: {item.variante_id}")
+            if str(variante.producto_id) != str(item.producto_id):
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, f"La variante {item.variante_id} no pertenece al producto {item.producto_id}")
 
     paquete = Paquete(
         nombre=body.nombre,
@@ -202,6 +207,12 @@ def editar_paquete(
         for item_in in body.items:
             if not db.get(Producto, str(item_in.producto_id)):
                 raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Producto no encontrado: {item_in.producto_id}")
+            if item_in.variante_id:
+                variante = db.get(Variante, str(item_in.variante_id))
+                if not variante:
+                    raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Variante no encontrada: {item_in.variante_id}")
+                if str(variante.producto_id) != str(item_in.producto_id):
+                    raise HTTPException(status.HTTP_400_BAD_REQUEST, f"La variante {item_in.variante_id} no pertenece al producto {item_in.producto_id}")
             paquete.items.append(PaqueteItem(
                 producto_id=item_in.producto_id,
                 variante_id=item_in.variante_id,

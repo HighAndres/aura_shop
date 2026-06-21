@@ -66,6 +66,10 @@ export async function forgotPassword(email: string): Promise<void> {
   });
 }
 
+export async function tryRefresh(): Promise<boolean> {
+  return refresh();
+}
+
 async function refresh(): Promise<boolean> {
   const refresh_token = window.localStorage.getItem(REFRESH_KEY);
   if (!refresh_token) return false;

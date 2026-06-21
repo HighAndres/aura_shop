@@ -393,7 +393,17 @@ def toggle_producto(
     if producto is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Producto no encontrado")
 
-    producto.activo = not producto.activo
+    nuevo_estado = not producto.activo
+    if nuevo_estado:
+        from decimal import Decimal
+        tiene_precio = any(v.precio > Decimal(0) for v in producto.variantes)
+        if not tiene_precio:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "No se puede activar un producto sin precio asignado",
+            )
+
+    producto.activo = nuevo_estado
     db.commit()
     db.refresh(producto)
 

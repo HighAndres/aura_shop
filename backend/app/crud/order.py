@@ -4,6 +4,7 @@ import uuid
 from decimal import Decimal
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.crud import inventory as crud_inv
@@ -37,7 +38,13 @@ class StockInsuficienteCheckout(CheckoutError):
 
 
 def _siguiente_numero(db: Session) -> str:
-    n = db.scalar(select(func.count()).select_from(Pedido)) or 0
+    ultimo = db.scalar(
+        select(Pedido.numero).order_by(Pedido.created_at.desc()).limit(1)
+    )
+    if ultimo:
+        n = int(ultimo.split("-")[-1])
+    else:
+        n = 0
     return f"AURA-{n + 1:06d}"
 
 
@@ -67,7 +74,14 @@ def checkout(
     if not email:
         raise CheckoutError("Se requiere un correo para el pedido")
 
-    # 1) Validar stock de todas las líneas antes de tocar nada.
+    # 1) Bloquear variantes y validar stock (FOR UPDATE evita sobreventa).
+    variante_ids = [it.variante_id for it in cart.items]
+    db.execute(
+        select(StockMovimiento.variante_id)
+        .where(StockMovimiento.variante_id.in_(variante_ids))
+        .with_for_update()
+    )
+
     faltantes: list[tuple[str, int, int]] = []
     for it in cart.items:
         disp = crud_inv.disponible(db, it.variante_id, almacen.id)
@@ -133,6 +147,30 @@ def checkout(
 
     cart.estado = "convertido"
 
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise CheckoutError("Error al generar el pedido, por favor intenta de nuevo")
+
     db.refresh(pedido)
     return pedido
+
+
+def restaurar_inventario(db: Session, pedido: Pedido) -> None:
+    """Revierte los movimientos de salida de un pedido cancelado."""
+    almacen = crud_inv.get_almacen_by_codigo(db, ALMACEN_CHECKOUT)
+    if almacen is None:
+        return
+    for item in pedido.items:
+        if item.variante_id:
+            db.add(
+                StockMovimiento(
+                    variante_id=item.variante_id,
+                    almacen_id=almacen.id,
+                    tipo=TipoMovimiento.ENTRADA.value,
+                    cantidad=item.cantidad,
+                    referencia=pedido.numero,
+                    nota="Devolución por cancelación",
+                )
+            )
