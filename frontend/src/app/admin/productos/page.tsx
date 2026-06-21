@@ -601,10 +601,11 @@ export default function AdminProductosPage() {
                         if (!editingId) {
                       const newSlug = slugify(e.target.value);
                       setSlug(newSlug);
+                      const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
                       setVariantes((prev) =>
                         prev.map((v, i) =>
                           i === 0 && !v.sku
-                            ? { ...v, sku: newSlug.toUpperCase().slice(0, 30) || "" }
+                            ? { ...v, sku: newSlug ? `${newSlug.toUpperCase().slice(0, 25)}-${suffix}` : "" }
                             : v,
                         ),
                       );
@@ -805,9 +806,10 @@ export default function AdminProductosPage() {
                   size="sm"
                   onClick={() =>
                     setVariantes((prev) => {
-                      const base = slug.toUpperCase().slice(0, 25);
+                      const base = slug.toUpperCase().slice(0, 20);
+                      const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
                       const newVar = emptyVariante();
-                      if (base) newVar.sku = `${base}-${prev.length + 1}`;
+                      if (base) newVar.sku = `${base}-${prev.length + 1}-${suffix}`;
                       return [...prev, newVar];
                     })
                   }
