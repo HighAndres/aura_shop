@@ -39,7 +39,7 @@ class StockInsuficienteCheckout(CheckoutError):
 
 def _siguiente_numero(db: Session) -> str:
     ultimo = db.scalar(
-        select(Pedido.numero).order_by(Pedido.created_at.desc()).limit(1)
+        select(Pedido.numero).order_by(Pedido.numero.desc()).limit(1)
     )
     if ultimo:
         n = int(ultimo.split("-")[-1])
