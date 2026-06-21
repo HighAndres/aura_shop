@@ -92,7 +92,7 @@ export default async function HomePage() {
           {/* Categorías */}
           {categorias.length > 0 && (
             <section className="flex flex-wrap justify-center gap-2 animate-fade-up [animation-delay:0.3s] opacity-0 [animation-fill-mode:forwards]">
-              {categorias.map((c, i) => (
+              {categorias.map((c) => (
                 <Button
                   key={c.id}
                   asChild

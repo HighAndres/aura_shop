@@ -19,7 +19,6 @@ import Image from "next/image";
 
 import { useAuth } from "@/components/auth-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { adminFetch } from "@/lib/admin-api";
 import { formatMXN } from "@/lib/format";
 import type { PedidoPage, VentasResumen, InventarioResumen } from "@/lib/types";
@@ -58,7 +57,6 @@ export default function AdminDashboardPage() {
 
   const isSuperadmin = user?.roles.includes("superadmin");
   const isAdmin = user?.roles.includes("administrador") || isSuperadmin;
-  const isVendedor = user?.roles.includes("vendedor");
 
   useEffect(() => {
     async function load() {
