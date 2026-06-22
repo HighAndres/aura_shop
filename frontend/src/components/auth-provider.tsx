@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -12,6 +13,9 @@ import { useCart } from "@/components/cart-provider";
 import * as auth from "@/lib/auth-client";
 import { getCartToken, mergeGuestCart } from "@/lib/cart-client";
 import type { Usuario } from "@/lib/types";
+
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutos
+const ACTIVITY_EVENTS = ["mousedown", "keydown", "scroll", "touchstart"] as const;
 
 interface AuthContextValue {
   user: Usuario | null;
@@ -31,6 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const cart = useCart();
   const [user, setUser] = useState<Usuario | null>(null);
   const [loading, setLoading] = useState(true);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     auth
@@ -40,7 +45,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  // Tras autenticarse: hereda el carrito de invitado y refresca todo.
+  const doLogout = useCallback(() => {
+    auth.clearTokens();
+    setUser(null);
+    void cart.refresh();
+  }, [cart]);
+
+  // Inactivity timer: reset on user activity, logout when expired.
+  useEffect(() => {
+    if (!user) return;
+
+    function resetTimer() {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        doLogout();
+        window.location.href = "/login";
+      }, INACTIVITY_TIMEOUT_MS);
+    }
+
+    resetTimer();
+    for (const evt of ACTIVITY_EVENTS) {
+      window.addEventListener(evt, resetTimer, { passive: true });
+    }
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      for (const evt of ACTIVITY_EVENTS) {
+        window.removeEventListener(evt, resetTimer);
+      }
+    };
+  }, [user, doLogout]);
+
   const afterAuth = useCallback(async () => {
     const guestToken = getCartToken();
     if (guestToken) {
@@ -71,14 +106,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [afterAuth],
   );
 
-  const logout = useCallback(() => {
-    auth.clearTokens();
-    setUser(null);
-    void cart.refresh();
-  }, [cart]);
-
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout: doLogout }}>
       {children}
     </AuthContext.Provider>
   );
