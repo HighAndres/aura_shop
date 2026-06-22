@@ -11,9 +11,12 @@ import {
   Boxes,
   Activity,
   User,
+  Download,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 
 import { useAuth } from "@/components/auth-provider";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -112,6 +115,97 @@ function StatCard({
   );
 }
 
+function downloadXLSX(sheets: { name: string; data: Record<string, unknown>[] }[], filename: string) {
+  const wb = XLSX.utils.book_new();
+  for (const s of sheets) {
+    const ws = XLSX.utils.json_to_sheet(s.data);
+    XLSX.utils.book_append_sheet(wb, ws, s.name);
+  }
+  XLSX.writeFile(wb, filename);
+}
+
+function exportVentas(ventas: VentasResumen, diasLabel: string, isVendedor: boolean) {
+  const sheets: { name: string; data: Record<string, unknown>[] }[] = [];
+
+  // Resumen
+  sheets.push({
+    name: "Resumen",
+    data: [{
+      Periodo: `${ventas.periodo_inicio} a ${ventas.periodo_fin}`,
+      "Total pedidos": ventas.total_pedidos,
+      "Total ventas": Number(ventas.total_ventas),
+      "Ticket promedio": Number(ventas.ticket_promedio),
+    }],
+  });
+
+  // Por estado
+  if (Object.keys(ventas.por_estado).length > 0) {
+    sheets.push({
+      name: "Por estado",
+      data: Object.entries(ventas.por_estado).map(([estado, count]) => ({
+        Estado: estado,
+        Pedidos: count,
+      })),
+    });
+  }
+
+  // Ventas diarias
+  if (ventas.ventas_diarias.length > 0) {
+    sheets.push({
+      name: "Ventas diarias",
+      data: ventas.ventas_diarias.map((d) => ({
+        Fecha: d.fecha,
+        Pedidos: d.pedidos,
+        Total: Number(d.total),
+      })),
+    });
+  }
+
+  // Productos top
+  if (ventas.productos_top.length > 0) {
+    sheets.push({
+      name: "Productos top",
+      data: ventas.productos_top.map((p, i) => ({
+        "#": i + 1,
+        Producto: p.nombre,
+        Unidades: p.cantidad,
+        ...(!isVendedor ? { Ingresos: Number(p.ingresos) } : {}),
+      })),
+    });
+  }
+
+  const prefix = isVendedor ? "Mi_rendimiento" : "Ventas_tienda";
+  downloadXLSX(sheets, `${prefix}_${diasLabel}.xlsx`);
+}
+
+function exportInventario(inventario: InventarioResumen) {
+  const sheets: { name: string; data: Record<string, unknown>[] }[] = [];
+
+  sheets.push({
+    name: "Resumen",
+    data: [{
+      "Total SKUs": inventario.total_skus,
+      "Con stock": inventario.skus_con_stock,
+      "Sin stock": inventario.skus_sin_stock,
+      "Valor inventario": Number(inventario.valor_inventario),
+      "Movimientos (7 días)": inventario.movimientos_recientes,
+    }],
+  });
+
+  if (inventario.stock_bajo.length > 0) {
+    sheets.push({
+      name: "Stock bajo",
+      data: inventario.stock_bajo.map((s) => ({
+        SKU: s.sku,
+        Disponible: s.disponible,
+        Estado: s.disponible <= 0 ? "Agotado" : "Bajo",
+      })),
+    });
+  }
+
+  downloadXLSX(sheets, "Inventario.xlsx");
+}
+
 export default function AdminReportesPage() {
   const { user } = useAuth();
   const [dias, setDias] = useState("30");
@@ -187,13 +281,21 @@ export default function AdminReportesPage() {
          ══════════════════════════════════════════════════════════ */}
       {isVendedor && (
         <section>
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            Mis ventas
-            <span className="text-sm font-normal text-muted-foreground">
-              — Últimos {diasLabel}
-            </span>
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              Mis ventas
+              <span className="text-sm font-normal text-muted-foreground">
+                — Últimos {diasLabel}
+              </span>
+            </h2>
+            {ventas && (
+              <Button variant="outline" size="sm" onClick={() => exportVentas(ventas, diasLabel, true)}>
+                <Download className="h-4 w-4 mr-1" />
+                Excel
+              </Button>
+            )}
+          </div>
 
           {loadingVentas ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -351,13 +453,21 @@ export default function AdminReportesPage() {
          ══════════════════════════════════════════════════════════ */}
       {isAdmin && (
         <section>
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            Ventas de la tienda
-            <span className="text-sm font-normal text-muted-foreground">
-              — Últimos {diasLabel}
-            </span>
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              Ventas de la tienda
+              <span className="text-sm font-normal text-muted-foreground">
+                — Últimos {diasLabel}
+              </span>
+            </h2>
+            {ventas && (
+              <Button variant="outline" size="sm" onClick={() => exportVentas(ventas, diasLabel, false)}>
+                <Download className="h-4 w-4 mr-1" />
+                Excel
+              </Button>
+            )}
+          </div>
 
           {loadingVentas ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -554,10 +664,18 @@ export default function AdminReportesPage() {
          ══════════════════════════════════════════════════════════ */}
       {isAdmin && (
         <section>
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Boxes className="h-5 w-5 text-primary" />
-            Inventario
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Boxes className="h-5 w-5 text-primary" />
+              Inventario
+            </h2>
+            {inventario && (
+              <Button variant="outline" size="sm" onClick={() => exportInventario(inventario)}>
+                <Download className="h-4 w-4 mr-1" />
+                Excel
+              </Button>
+            )}
+          </div>
 
           {loadingInv ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
