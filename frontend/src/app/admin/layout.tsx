@@ -243,7 +243,8 @@ export default function AdminLayout({
 
           <footer className="border-t py-3">
             <p className="text-center text-xs text-muted-foreground">
-              Desarrollado por mirmibug
+              Desarrollado por{" "}
+              <a href="https://www.mirmibug.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">mirmibug</a>
             </p>
           </footer>
         </div>

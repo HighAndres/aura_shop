@@ -59,7 +59,9 @@ export function SiteFooter() {
       <div className="border-t py-4">
         <p className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 text-xs text-muted-foreground sm:px-6">
           <span>© {new Date().getFullYear()} Aura · Hecho con cariño en México</span>
-          <span>Desarrollado por mirmibug</span>
+          <span>Desarrollado por{" "}
+            <a href="https://www.mirmibug.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">mirmibug</a>
+          </span>
         </p>
       </div>
     </footer>
