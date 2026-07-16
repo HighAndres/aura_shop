@@ -21,6 +21,7 @@ import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { PERM, canAny, type Permiso } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 const STAFF_ROLES = ["superadmin", "administrador", "vendedor"];
@@ -29,7 +30,8 @@ interface NavItem {
   href: string;
   label: string;
   icon: React.ElementType;
-  roles: string[];
+  /** Basta con tener uno para ver la sección. Vacío = cualquier staff. */
+  permisos: Permiso[];
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -37,55 +39,64 @@ const NAV_ITEMS: NavItem[] = [
     href: "/admin",
     label: "Dashboard",
     icon: LayoutDashboard,
-    roles: ["superadmin", "administrador", "vendedor"],
+    permisos: [],
   },
   {
+    // Se pide "editar" y no "leer": el vendedor necesita leer el catálogo para
+    // buscar productos al levantar un pedido, pero no gestionarlo.
     href: "/admin/productos",
     label: "Productos",
     icon: Package,
-    roles: ["superadmin", "administrador", "vendedor"],
+    permisos: [PERM.PRODUCTOS_EDITAR],
   },
   {
     href: "/admin/paquetes",
     label: "Paquetes",
     icon: Gift,
-    roles: ["superadmin", "administrador"],
+    permisos: [PERM.PAQUETES_GESTIONAR],
   },
   {
     href: "/admin/pedidos",
     label: "Pedidos",
     icon: ShoppingCart,
-    roles: ["superadmin", "administrador", "vendedor"],
+    permisos: [PERM.PEDIDOS_LEER, PERM.PEDIDOS_LEER_ASIGNADOS],
   },
   {
     href: "/admin/inventario",
     label: "Inventario",
     icon: Warehouse,
-    roles: ["superadmin", "administrador", "vendedor"],
+    permisos: [PERM.INVENTARIO_LEER],
   },
   {
     href: "/admin/reportes",
     label: "Reportes",
     icon: BarChart3,
-    roles: ["superadmin", "administrador", "vendedor"],
+    permisos: [PERM.REPORTES_LEER],
   },
   {
     href: "/admin/usuarios",
     label: "Usuarios",
     icon: Users,
-    roles: ["superadmin", "administrador"],
+    permisos: [PERM.USUARIOS_LEER],
   },
   {
     href: "/admin/bitacora",
     label: "Bitácora",
     icon: ScrollText,
-    roles: ["superadmin"],
+    permisos: [PERM.BITACORA_LEER],
   },
 ];
 
 function isActive(pathname: string, href: string) {
   if (href === "/admin") return pathname === "/admin";
   return pathname.startsWith(href);
+}
+
+/** Sección a la que pertenece una ruta, para saber qué permiso exigirle. */
+function seccionDe(pathname: string): NavItem | undefined {
+  return NAV_ITEMS.filter((i) => i.href !== "/admin").find((i) =>
+    pathname.startsWith(i.href),
+  );
 }
 
 function SidebarContent({
@@ -142,7 +153,12 @@ function SidebarContent({
       <Separator />
 
       <div className="px-4 py-4">
-        <div className="mb-3">
+        <Link
+          href="/admin/perfil"
+          onClick={onNavigate}
+          className="mb-3 -mx-2 block rounded-md px-2 py-1.5 transition-colors hover:bg-muted"
+          title="Ver y editar mi perfil"
+        >
           <p className="truncate text-sm font-medium">
             {user.nombre_completo ?? user.email}
           </p>
@@ -150,7 +166,7 @@ function SidebarContent({
           <p className="mt-0.5 text-xs text-muted-foreground capitalize">
             {user.roles.join(", ")}
           </p>
-        </div>
+        </Link>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" className="flex-1" asChild>
             <Link href="/" onClick={onNavigate}>
@@ -179,6 +195,9 @@ export default function AdminLayout({
   const isStaff =
     user && user.roles.some((r) => STAFF_ROLES.includes(r));
 
+  const seccion = seccionDe(pathname);
+  const puedeVerSeccion = !seccion || canAny(user, seccion.permisos);
+
   useEffect(() => {
     if (loading) return;
     if (!user) {
@@ -187,8 +206,14 @@ export default function AdminLayout({
     }
     if (!isStaff) {
       router.replace("/");
+      return;
     }
-  }, [user, loading, isStaff, router]);
+    // Ocultar el menú no basta: sin esto se entra tecleando la URL. La API
+    // igual rechaza, pero el usuario vería una página rota en vez de un no.
+    if (!puedeVerSeccion) {
+      router.replace("/admin");
+    }
+  }, [user, loading, isStaff, puedeVerSeccion, router]);
 
   if (loading) {
     return (
@@ -198,11 +223,9 @@ export default function AdminLayout({
     );
   }
 
-  if (!user || !isStaff) return null;
+  if (!user || !isStaff || !puedeVerSeccion) return null;
 
-  const visibleItems = NAV_ITEMS.filter((item) =>
-    item.roles.some((r) => user.roles.includes(r)),
-  );
+  const visibleItems = NAV_ITEMS.filter((item) => canAny(user, item.permisos));
 
   const handleLogout = () => {
     logout();

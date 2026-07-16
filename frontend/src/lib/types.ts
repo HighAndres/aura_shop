@@ -76,9 +76,20 @@ export interface Usuario {
   email: string;
   nombre_completo: string | null;
   telefono: string | null;
+  /** RFC: 13 caracteres (persona física) o 12 (moral). Obligatorio en vendedores. */
+  rfc?: string | null;
+  direccion_calle?: string | null;
+  direccion_ciudad?: string | null;
+  direccion_estado?: string | null;
+  direccion_cp?: string | null;
   is_active: boolean;
   is_verified: boolean;
   roles: string[];
+  /**
+   * Permisos efectivos. Solo lo devuelve /users/me (el perfil propio);
+   * el listado de usuarios lo omite, de ahí que sea opcional.
+   */
+  permisos?: string[];
   created_at: string;
 }
 
@@ -140,6 +151,24 @@ export interface Pedido {
   asignado_a_nombre: string | null;
   items: PedidoItem[];
   created_at: string;
+}
+
+export interface PedidoEstadoHistorial {
+  /** Nulo en el asiento de creación del pedido. */
+  estado_anterior: string | null;
+  estado_nuevo: string;
+  /** "usuario" | "pasarela" | "sistema" */
+  origen: string;
+  nota: string | null;
+  referencia: string | null;
+  /** Nulo cuando el cambio no lo hizo una persona. */
+  actor_nombre: string | null;
+  created_at: string;
+}
+
+/** Solo lo devuelve GET /admin/orders/{numero}; el listado no trae historial. */
+export interface PedidoDetalle extends Pedido {
+  historial: PedidoEstadoHistorial[];
 }
 
 export interface CheckoutPayload {

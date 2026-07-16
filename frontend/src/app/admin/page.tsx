@@ -21,6 +21,7 @@ import { useAuth } from "@/components/auth-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { adminFetch } from "@/lib/admin-api";
 import { formatMXN } from "@/lib/format";
+import { PERM, can } from "@/lib/permissions";
 import type { PedidoPage, VentasResumen, InventarioResumen } from "@/lib/types";
 
 function saludo(): string {
@@ -55,8 +56,14 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const isSuperadmin = user?.roles.includes("superadmin");
-  const isAdmin = user?.roles.includes("administrador") || isSuperadmin;
+  const verInventario = can(user, PERM.INVENTARIO_LEER);
+  const gestionarProductos = can(user, PERM.PRODUCTOS_EDITAR);
+  const verReportes = can(user, PERM.REPORTES_LEER);
+  const verUsuarios = can(user, PERM.USUARIOS_LEER);
+  const gestionarRoles = can(user, PERM.ROLES_GESTIONAR);
+  // Las métricas globales salen del reporte de ventas, que solo trae el total
+  // de la tienda a quien puede ver todos los pedidos.
+  const isAdmin = can(user, PERM.PEDIDOS_LEER);
 
   useEffect(() => {
     async function load() {
@@ -86,11 +93,13 @@ export default function AdminDashboardPage() {
         s.pedidosEnviados = enviados.total;
       } catch {}
 
-      try {
-        const inv = await adminFetch<InventarioResumen>("/admin/reports/inventario");
-        s.skusConStock = inv.skus_con_stock;
-        s.skusSinStock = inv.skus_sin_stock;
-      } catch {}
+      if (verInventario) {
+        try {
+          const inv = await adminFetch<InventarioResumen>("/admin/reports/inventario");
+          s.skusConStock = inv.skus_con_stock;
+          s.skusSinStock = inv.skus_sin_stock;
+        } catch {}
+      }
 
       if (isAdmin) {
         try {
@@ -110,7 +119,7 @@ export default function AdminDashboardPage() {
       setLoading(false);
     }
     load();
-  }, [isAdmin]);
+  }, [isAdmin, verInventario]);
 
   return (
     <div className="space-y-6">
@@ -217,24 +226,26 @@ export default function AdminDashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/admin/inventario">
-              <Card className="transition-all hover:shadow-md hover:-translate-y-0.5 animate-fade-up" style={{ animationDelay: "0.25s", opacity: 0 }}>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Sin stock
-                  </CardTitle>
-                  <AlertTriangle className="h-4 w-4 text-red-500" />
-                </CardHeader>
-                <CardContent>
-                  <p className="text-3xl font-bold text-red-600">
-                    {stats?.skusSinStock ?? 0}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    SKUs agotados
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
+            {verInventario && (
+              <Link href="/admin/inventario">
+                <Card className="transition-all hover:shadow-md hover:-translate-y-0.5 animate-fade-up" style={{ animationDelay: "0.25s", opacity: 0 }}>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Sin stock
+                    </CardTitle>
+                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-3xl font-bold text-red-600">
+                      {stats?.skusSinStock ?? 0}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      SKUs agotados
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+            )}
           </div>
 
           {/* Admin-only: second row */}
@@ -316,24 +327,26 @@ export default function AdminDashboardPage() {
             </Card>
           </Link>
 
-          <Link href="/admin/productos">
-            <Card className="group transition-all hover:shadow-md hover:-translate-y-0.5 cursor-pointer">
-              <CardContent className="flex items-center gap-3 p-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                  <Package className="h-5 w-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">Gestionar productos</p>
-                  <p className="text-xs text-muted-foreground">
-                    Agregar, editar o consultar catálogo
-                  </p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-              </CardContent>
-            </Card>
-          </Link>
+          {gestionarProductos && (
+            <Link href="/admin/productos">
+              <Card className="group transition-all hover:shadow-md hover:-translate-y-0.5 cursor-pointer">
+                <CardContent className="flex items-center gap-3 p-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                    <Package className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">Gestionar productos</p>
+                    <p className="text-xs text-muted-foreground">
+                      Agregar, editar o consultar catálogo
+                    </p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                </CardContent>
+              </Card>
+            </Link>
+          )}
 
-          {isAdmin && (
+          {verReportes && (
             <Link href="/admin/reportes">
               <Card className="group transition-all hover:shadow-md hover:-translate-y-0.5 cursor-pointer">
                 <CardContent className="flex items-center gap-3 p-4">
@@ -343,7 +356,9 @@ export default function AdminDashboardPage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">Ver reportes</p>
                     <p className="text-xs text-muted-foreground">
-                      Ventas, inventario y métricas
+                      {verInventario
+                        ? "Ventas, inventario y métricas"
+                        : "Tus ventas y métricas"}
                     </p>
                   </div>
                   <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -352,7 +367,7 @@ export default function AdminDashboardPage() {
             </Link>
           )}
 
-          {isSuperadmin && (
+          {verUsuarios && (
             <Link href="/admin/usuarios">
               <Card className="group transition-all hover:shadow-md hover:-translate-y-0.5 cursor-pointer">
                 <CardContent className="flex items-center gap-3 p-4">
@@ -360,9 +375,11 @@ export default function AdminDashboardPage() {
                     <Users className="h-5 w-5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">Administrar usuarios</p>
+                    <p className="text-sm font-medium">
+                      {gestionarRoles ? "Administrar usuarios" : "Consultar usuarios"}
+                    </p>
                     <p className="text-xs text-muted-foreground">
-                      Roles, permisos y cuentas
+                      {gestionarRoles ? "Roles, permisos y cuentas" : "Directorio de cuentas"}
                     </p>
                   </div>
                   <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />

@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_active_user, require_permissions
+from app.api.deps import get_current_active_user, has_permission, require_permissions
 from app.db.session import get_db
 from app.models.catalog import Variante
 from app.models.order import EstadoPedido, Pedido, PedidoItem
@@ -16,8 +16,6 @@ from app.models.inventory import StockMovimiento
 from app.models.user import Usuario
 
 router = APIRouter(prefix="/admin/reports", tags=["admin-reports"])
-
-ADMIN_ROLES = {"superadmin", "administrador"}
 
 
 # ── Schemas ────────────────────────────────────────────────────────────
@@ -74,9 +72,9 @@ def reporte_ventas(
     desde = date.today() - timedelta(days=dias)
     hasta = date.today()
 
-    user_roles = {r.nombre for r in current_user.roles}
-    es_admin = bool(user_roles & ADMIN_ROLES)
-    vendedor_id = None if es_admin else current_user.id
+    # Quien no puede ver todos los pedidos solo se ve a sí mismo en el reporte.
+    ve_todo = has_permission(current_user, "pedidos.leer")
+    vendedor_id = None if ve_todo else current_user.id
 
     conds = _filtros_periodo(desde, vendedor_id)
 
@@ -153,7 +151,9 @@ def reporte_ventas(
     "/inventario",
     response_model=InventarioResumen,
     summary="Resumen de inventario",
-    dependencies=[Depends(require_permissions("reportes.leer"))],
+    # Exige inventario.leer además de reportes.leer: si no, este reporte sería
+    # una puerta trasera al stock para quien solo puede ver reportes.
+    dependencies=[Depends(require_permissions("reportes.leer", "inventario.leer"))],
 )
 def reporte_inventario(
     db: Session = Depends(get_db),

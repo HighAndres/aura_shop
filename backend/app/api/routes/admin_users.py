@@ -3,12 +3,13 @@
 import uuid as _uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_permissions
 from app.core import audit
+from app.core.rfc import validar_rfc
 from app.core.security import hash_password
 from app.db.session import get_db
 from app.models.rbac import Rol
@@ -20,21 +21,51 @@ router = APIRouter(prefix="/admin/users", tags=["admin-users"])
 
 # ── Schemas ────────────────────────────────────────────────────────────
 
+# Roles a los que se les exige RFC al darlos de alta.
+ROLES_CON_RFC = {"vendedor"}
+
+
 class AdminUserCreate(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     nombre_completo: str | None = Field(default=None, max_length=255)
     telefono: str | None = Field(default=None, max_length=32)
+    rfc: str | None = Field(default=None, max_length=13)
     roles: list[str] = []
+
+    # mode="before": ver la nota en UserProfileUpdate. Normalizar va antes de
+    # medir la longitud, o un RFC con guiones nunca pasa.
+    @field_validator("rfc", mode="before")
+    @classmethod
+    def _normalizar_rfc(cls, v: object) -> str | None:
+        if v is None or not str(v).strip():
+            return None
+        return validar_rfc(str(v))
+
+    @model_validator(mode="after")
+    def _rfc_obligatorio_para_vendedor(self) -> "AdminUserCreate":
+        # El RFC es obligatorio para el vendedor, no para clientes ni staff
+        # interno, así que se exige aquí y no en la columna.
+        if ROLES_CON_RFC.intersection(self.roles) and not self.rfc:
+            raise ValueError("El RFC es obligatorio para dar de alta a un vendedor")
+        return self
 
 
 class AdminUserUpdate(BaseModel):
     nombre_completo: str | None = Field(default=None, max_length=255)
     telefono: str | None = Field(default=None, max_length=32)
+    rfc: str | None = Field(default=None, max_length=13)
     password: str | None = Field(default=None, min_length=8, max_length=128)
     is_active: bool | None = None
     is_verified: bool | None = None
     roles: list[str] | None = None
+
+    @field_validator("rfc", mode="before")
+    @classmethod
+    def _normalizar_rfc(cls, v: object) -> str | None:
+        if v is None or not str(v).strip():
+            return None
+        return validar_rfc(str(v))
 
 
 class AdminUserPage(BaseModel):
@@ -122,6 +153,7 @@ def crear_usuario(
         hashed_password=hash_password(body.password),
         nombre_completo=body.nombre_completo,
         telefono=body.telefono,
+        rfc=body.rfc,
         is_verified=True,
     )
 
@@ -166,6 +198,8 @@ def editar_usuario(
         user.nombre_completo = changes["nombre_completo"]
     if "telefono" in changes:
         user.telefono = changes["telefono"]
+    if "rfc" in changes:
+        user.rfc = changes["rfc"]
     if body.password:
         user.hashed_password = hash_password(body.password)
         changes["password"] = "***"
@@ -182,6 +216,17 @@ def editar_usuario(
             )
         roles = db.scalars(select(Rol).where(Rol.nombre.in_(body.roles))).all()
         user.roles = list(roles)
+
+    # Se revisa contra el estado final, no contra el cuerpo: ascender a
+    # vendedor a alguien sin RFC sería la puerta de atrás a la validación del
+    # alta. El RFC puede venir en esta misma petición o ya estar guardado.
+    roles_finales = {r.nombre for r in user.roles}
+    if ROLES_CON_RFC.intersection(roles_finales) and not user.rfc:
+        db.rollback()
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "El RFC es obligatorio para un vendedor",
+        )
 
     db.commit()
     db.refresh(user)

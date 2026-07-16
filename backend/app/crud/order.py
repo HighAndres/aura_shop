@@ -7,10 +7,11 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.order_state import registrar_creacion
 from app.crud import inventory as crud_inv
 from app.models.cart import Carrito
 from app.models.inventory import StockMovimiento, TipoMovimiento
-from app.models.order import Pedido, PedidoItem
+from app.models.order import OrigenTransicion, Pedido, PedidoItem
 from app.schemas.order import CheckoutIn
 
 ALMACEN_CHECKOUT = "PRINCIPAL"
@@ -144,6 +145,12 @@ def checkout(
     pedido.subtotal = subtotal
     pedido.total = subtotal + pedido.envio
     db.add(pedido)
+    registrar_creacion(
+        db,
+        pedido,
+        origen=OrigenTransicion.USUARIO,
+        nota="Pedido creado desde la tienda",
+    )
 
     cart.estado = "convertido"
 
