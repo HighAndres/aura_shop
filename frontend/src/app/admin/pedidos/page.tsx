@@ -40,8 +40,10 @@ import {
 } from "@/components/ui/dialog";
 import { adminFetch } from "@/lib/admin-api";
 import { formatMXN } from "@/lib/format";
+import { PERM, can, type Permiso } from "@/lib/permissions";
 import type {
   Pedido,
+  PedidoDetalle,
   PedidoPage,
   Usuario,
   ProductoAdmin,
@@ -67,6 +69,21 @@ const TRANSICIONES: Record<string, string[]> = {
   cancelado: [],
 };
 
+const ORIGEN_LABEL: Record<string, string> = {
+  usuario: "manual",
+  pasarela: "pago confirmado",
+  sistema: "automático",
+};
+
+// Espejo de PERMISO_POR_ESTADO en backend/app/core/order_state.py.
+// El botón solo aparece si la API va a aceptar el cambio.
+const PERMISO_POR_ESTADO: Record<string, Permiso> = {
+  pagado: PERM.PEDIDOS_MARCAR_PAGADO,
+  enviado: PERM.PEDIDOS_MARCAR_ENVIADO,
+  entregado: PERM.PEDIDOS_MARCAR_ENTREGADO,
+  cancelado: PERM.PEDIDOS_CANCELAR,
+};
+
 const PAGE_SIZE = 20;
 
 interface LineaPedido {
@@ -88,7 +105,8 @@ function PedidosContent() {
   );
   const [busqueda, setBusqueda] = useState("");
   const [offset, setOffset] = useState(0);
-  const [selected, setSelected] = useState<Pedido | null>(null);
+  const [selected, setSelected] = useState<PedidoDetalle | null>(null);
+  const [loadingDetalle, setLoadingDetalle] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [staffUsers, setStaffUsers] = useState<Usuario[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -113,18 +131,8 @@ function PedidosContent() {
   const [creando, setCreando] = useState(false);
   const [crearError, setCrearError] = useState("");
 
-  const canEdit = user?.roles.some((r) =>
-    ["superadmin", "administrador", "vendedor"].includes(r),
-  );
-  const canCancel = user?.roles.some((r) =>
-    ["superadmin", "administrador"].includes(r),
-  );
-  const canAssign = user?.roles.some((r) =>
-    ["superadmin", "administrador"].includes(r),
-  );
-  const canCreate = user?.roles.some((r) =>
-    ["superadmin", "administrador", "vendedor"].includes(r),
-  );
+  const canAssign = can(user, PERM.PEDIDOS_REASIGNAR);
+  const canCreate = can(user, PERM.PEDIDOS_CREAR);
 
   const fetchPedidos = useCallback(async () => {
     setLoading(true);
@@ -288,6 +296,22 @@ function PedidosContent() {
     }
   }
 
+  /** El listado no trae el historial; se pide al abrir el detalle. */
+  async function abrirDetalle(pedido: Pedido) {
+    setErrorMsg(null);
+    // Se muestra de inmediato lo que ya se tiene del listado y la línea de
+    // tiempo se rellena cuando llega, en vez de dejar el modal en blanco.
+    setSelected({ ...pedido, historial: [] });
+    setLoadingDetalle(true);
+    try {
+      setSelected(await adminFetch<PedidoDetalle>(`/admin/orders/${pedido.numero}`));
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Error al cargar el detalle");
+    } finally {
+      setLoadingDetalle(false);
+    }
+  }
+
   async function reasignar(numero: string, asignadoA: string | null) {
     setUpdating(true);
     setErrorMsg(null);
@@ -296,7 +320,8 @@ function PedidosContent() {
         method: "PUT",
         body: JSON.stringify({ asignado_a: asignadoA }),
       });
-      setSelected(res);
+      // Reasignar no toca el estado: se conserva la línea de tiempo ya cargada.
+      setSelected((prev) => (prev ? { ...res, historial: prev.historial } : null));
       await fetchPedidos();
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Error al reasignar");
@@ -389,7 +414,7 @@ function PedidosContent() {
                 <TableRow
                   key={p.id}
                   className="cursor-pointer"
-                  onClick={() => setSelected(p)}
+                  onClick={() => abrirDetalle(p)}
                 >
                   <TableCell className="font-mono text-sm">{p.numero}</TableCell>
                   <TableCell className="text-sm">{p.email}</TableCell>
@@ -564,10 +589,9 @@ function PedidosContent() {
               {/* Acciones de estado */}
               {(() => {
                 const trans = TRANSICIONES[selected.estado] ?? [];
-                const acciones = trans.filter((e) => {
-                  if (e === "cancelado") return canCancel;
-                  return canEdit;
-                });
+                const acciones = trans.filter((e) =>
+                  can(user, PERMISO_POR_ESTADO[e]),
+                );
                 if (acciones.length === 0) return null;
                 return (
                   <div className="flex flex-wrap gap-2 pt-2">
@@ -586,6 +610,51 @@ function PedidosContent() {
                   </div>
                 );
               })()}
+
+              {/* Línea de tiempo de estados */}
+              <div className="pt-2">
+                <h3 className="mb-3 text-sm font-medium">Historial</h3>
+                {loadingDetalle && selected.historial.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Cargando historial...</p>
+                ) : selected.historial.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    Sin movimientos registrados.
+                  </p>
+                ) : (
+                  <ol className="space-y-3">
+                    {selected.historial.map((h, i) => (
+                      <li key={i} className="flex gap-3 text-xs">
+                        <div className="flex flex-col items-center">
+                          <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                          {i < selected.historial.length - 1 && (
+                            <span className="mt-1 w-px flex-1 bg-border" />
+                          )}
+                        </div>
+                        <div className="flex-1 pb-1">
+                          <p className="font-medium">
+                            {h.estado_anterior
+                              ? `${h.estado_anterior} → ${h.estado_nuevo}`
+                              : `Pedido creado (${h.estado_nuevo})`}
+                            <span className="ml-2 font-normal text-muted-foreground">
+                              {ORIGEN_LABEL[h.origen] ?? h.origen}
+                            </span>
+                          </p>
+                          <p className="text-muted-foreground">
+                            {new Date(h.created_at).toLocaleString("es-MX")}
+                            {h.actor_nombre && ` · ${h.actor_nombre}`}
+                          </p>
+                          {h.nota && <p className="mt-0.5 italic">{h.nota}</p>}
+                          {h.referencia && (
+                            <p className="mt-0.5 font-mono text-muted-foreground">
+                              Ref: {h.referencia}
+                            </p>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
             </div>
           )}
         </DialogContent>
@@ -627,7 +696,7 @@ function PedidosContent() {
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar producto por nombre..."
+                  placeholder="Buscar por nombre, SKU o código de barras..."
                   value={prodSearch}
                   onChange={(e) => {
                     setProdSearch(e.target.value);

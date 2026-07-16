@@ -81,8 +81,23 @@ def get_current_active_user(
     return current_user
 
 
-def _user_permission_codes(user: Usuario) -> set[str]:
+def user_permission_codes(user: Usuario) -> set[str]:
+    """Permisos efectivos del usuario (unión de los de todos sus roles)."""
     return {p.codigo for rol in user.roles for p in rol.permisos}
+
+
+# Alias retrocompatible.
+_user_permission_codes = user_permission_codes
+
+
+def has_permission(user: Usuario, code: str) -> bool:
+    """¿El usuario tiene este permiso? Para chequeos dentro del endpoint.
+
+    Úsalo cuando el permiso requerido depende del cuerpo de la petición
+    (p. ej. la transición de estado que se pide), donde no se puede resolver
+    como dependencia.
+    """
+    return code in user_permission_codes(user)
 
 
 def require_permissions(*codes: str) -> Callable[[Usuario], Usuario]:
@@ -91,9 +106,29 @@ def require_permissions(*codes: str) -> Callable[[Usuario], Usuario]:
     def checker(
         current_user: Usuario = Depends(get_current_active_user),
     ) -> Usuario:
-        otorgados = _user_permission_codes(current_user)
+        otorgados = user_permission_codes(current_user)
         faltantes = set(codes) - otorgados
         if faltantes:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permisos para realizar esta acción",
+            )
+        return current_user
+
+    return checker
+
+
+def require_any_permission(*codes: str) -> Callable[[Usuario], Usuario]:
+    """Dependencia que exige AL MENOS UNO de los permisos dados.
+
+    El alcance de lo que devuelve el endpoint se afina después: p. ej. quien
+    solo tiene "pedidos.leer_asignados" entra, pero ve nada más lo suyo.
+    """
+
+    def checker(
+        current_user: Usuario = Depends(get_current_active_user),
+    ) -> Usuario:
+        if not user_permission_codes(current_user).intersection(codes):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="No tienes permisos para realizar esta acción",

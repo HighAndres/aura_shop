@@ -51,6 +51,18 @@ class PedidoItemRead(BaseModel):
     subtotal: Decimal
 
 
+class PedidoEstadoHistorialRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    estado_anterior: str | None = None
+    estado_nuevo: str
+    origen: str
+    nota: str | None = None
+    referencia: str | None = None
+    actor_nombre: str | None = None
+    created_at: datetime
+
+
 class PedidoRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -73,3 +85,11 @@ class PedidoRead(BaseModel):
     asignado_a_nombre: str | None = None
     items: list[PedidoItemRead] = []
     created_at: datetime
+
+
+class PedidoDetalleRead(PedidoRead):
+    """Pedido con su línea de tiempo. Solo para el detalle: en el listado el
+    historial multiplicaría el tamaño de la respuesta sin que nadie lo mire.
+    """
+
+    historial: list[PedidoEstadoHistorialRead] = []

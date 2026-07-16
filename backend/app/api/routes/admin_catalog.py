@@ -4,15 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_permissions
+from app.api.deps import has_permission, require_permissions
 from app.core import audit
 from app.db.session import get_db
-
-PRICE_ADMIN_ROLES = {"superadmin", "administrador"}
-
-
-def _user_can_set_prices(user: "Usuario") -> bool:
-    return bool({r.nombre for r in user.roles} & PRICE_ADMIN_ROLES)
 from app.models.catalog import (
     Categoria,
     Marca,
@@ -35,6 +29,15 @@ from app.schemas.admin_catalog import (
 )
 
 router = APIRouter(prefix="/admin/catalog", tags=["admin-catalog"])
+
+
+def _user_can_set_prices(user: Usuario) -> bool:
+    """¿Puede fijar precio y publicar, o solo dejar el producto en borrador?
+
+    Quien puede crear pero no editar deja el producto inactivo y sin precio,
+    para que alguien con "productos.editar" lo revise y lo publique.
+    """
+    return has_permission(user, "productos.editar")
 
 
 def _serialize_producto(p: Producto) -> ProductoAdminRead:
@@ -64,7 +67,7 @@ def crear_marca(
     body: MarcaCreate,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_permissions("productos.crear")),
+    current_user: Usuario = Depends(require_permissions("marcas.gestionar")),
 ) -> MarcaAdminRead:
     if db.scalar(select(Marca).where(Marca.slug == body.slug)):
         raise HTTPException(status.HTTP_409_CONFLICT, f"Slug ya existe: {body.slug}")
@@ -75,7 +78,7 @@ def crear_marca(
     db.refresh(marca)
 
     audit.registrar(
-        db, actor=current_user, accion="productos.crear",
+        db, actor=current_user, accion="marcas.gestionar",
         descripcion=f"Marca creada: {marca.nombre}",
         entidad="marca", entidad_id=str(marca.id),
         cambios=body.model_dump(), request=request,
@@ -93,7 +96,7 @@ def editar_marca(
     body: MarcaUpdate,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_permissions("productos.editar")),
+    current_user: Usuario = Depends(require_permissions("marcas.gestionar")),
 ) -> MarcaAdminRead:
     marca = db.get(Marca, marca_id)
     if marca is None:
@@ -106,7 +109,7 @@ def editar_marca(
     db.refresh(marca)
 
     audit.registrar(
-        db, actor=current_user, accion="productos.editar",
+        db, actor=current_user, accion="marcas.gestionar",
         descripcion=f"Marca editada: {marca.nombre}",
         entidad="marca", entidad_id=str(marca.id),
         cambios=changes, request=request,
@@ -139,7 +142,7 @@ def crear_categoria(
     body: CategoriaCreate,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_permissions("productos.crear")),
+    current_user: Usuario = Depends(require_permissions("categorias.gestionar")),
 ) -> CategoriaAdminRead:
     if db.scalar(select(Categoria).where(Categoria.slug == body.slug)):
         raise HTTPException(status.HTTP_409_CONFLICT, f"Slug ya existe: {body.slug}")
@@ -150,7 +153,7 @@ def crear_categoria(
     db.refresh(cat)
 
     audit.registrar(
-        db, actor=current_user, accion="productos.crear",
+        db, actor=current_user, accion="categorias.gestionar",
         descripcion=f"Categoría creada: {cat.nombre}",
         entidad="categoria", entidad_id=str(cat.id),
         cambios=body.model_dump(mode="json"), request=request,
@@ -168,7 +171,7 @@ def editar_categoria(
     body: CategoriaUpdate,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_permissions("productos.editar")),
+    current_user: Usuario = Depends(require_permissions("categorias.gestionar")),
 ) -> CategoriaAdminRead:
     cat = db.get(Categoria, categoria_id)
     if cat is None:
@@ -181,7 +184,7 @@ def editar_categoria(
     db.refresh(cat)
 
     audit.registrar(
-        db, actor=current_user, accion="productos.editar",
+        db, actor=current_user, accion="categorias.gestionar",
         descripcion=f"Categoría editada: {cat.nombre}",
         entidad="categoria", entidad_id=str(cat.id),
         cambios=changes, request=request,
@@ -211,7 +214,17 @@ def listar_productos_admin(
 
     if q:
         esc = q.replace("%", r"\%").replace("_", r"\_")
-        filtro = Producto.nombre.ilike(f"%{esc}%") | Producto.slug.ilike(f"%{esc}%")
+        # Busca también por SKU y código de barras: al levantar un pedido el
+        # vendedor teclea el código del producto, no su nombre exacto.
+        # any() genera un EXISTS y evita duplicar el producto por variante.
+        filtro = (
+            Producto.nombre.ilike(f"%{esc}%")
+            | Producto.slug.ilike(f"%{esc}%")
+            | Producto.variantes.any(
+                Variante.sku.ilike(f"%{esc}%")
+                | Variante.codigo_barras.ilike(f"%{esc}%")
+            )
+        )
         query = query.where(filtro)
         count_q = count_q.where(filtro)
     if activo is not None:

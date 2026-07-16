@@ -35,6 +35,9 @@ import type { Usuario, UsuarioPage, RolInfo } from "@/lib/types";
 
 const PAGE_SIZE = 30;
 
+// Espejo de ROLES_CON_RFC en backend/app/api/routes/admin_users.py.
+const ROLES_CON_RFC = ["vendedor"];
+
 export default function AdminUsuariosPage() {
   const { user: currentUser } = useAuth();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -52,6 +55,7 @@ export default function AdminUsuariosPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [formNombre, setFormNombre] = useState("");
   const [formTelefono, setFormTelefono] = useState("");
+  const [formRfc, setFormRfc] = useState("");
   const [formRol, setFormRol] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -94,6 +98,7 @@ export default function AdminUsuariosPage() {
     setShowPassword(false);
     setFormNombre("");
     setFormTelefono("");
+    setFormRfc("");
     setFormRol("");
     setError("");
   }
@@ -111,6 +116,7 @@ export default function AdminUsuariosPage() {
     setShowPassword(false);
     setFormNombre(u.nombre_completo ?? "");
     setFormTelefono(u.telefono ?? "");
+    setFormRfc(u.rfc ?? "");
     setFormRol(u.roles[0] ?? "");
     setError("");
     setShowForm(true);
@@ -124,6 +130,7 @@ export default function AdminUsuariosPage() {
         const body: Record<string, unknown> = {
           nombre_completo: formNombre || null,
           telefono: formTelefono || null,
+          rfc: formRfc || null,
           roles: formRol ? [formRol] : [],
         };
         if (formPassword) {
@@ -145,6 +152,11 @@ export default function AdminUsuariosPage() {
           setSaving(false);
           return;
         }
+        if (ROLES_CON_RFC.includes(formRol) && !formRfc.trim()) {
+          setError("El RFC es obligatorio para dar de alta a un vendedor");
+          setSaving(false);
+          return;
+        }
         await adminFetch("/admin/users", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -153,6 +165,7 @@ export default function AdminUsuariosPage() {
             password: formPassword,
             nombre_completo: formNombre || null,
             telefono: formTelefono || null,
+            rfc: formRfc || null,
             roles: [formRol],
           }),
         });
@@ -390,6 +403,27 @@ export default function AdminUsuariosPage() {
                 value={formTelefono}
                 onChange={(e) => setFormTelefono(e.target.value)}
               />
+            </div>
+
+            <div>
+              <Label htmlFor="user-rfc">
+                RFC
+                {ROLES_CON_RFC.includes(formRol) && (
+                  <span className="ml-1 text-destructive">*</span>
+                )}
+              </Label>
+              <Input
+                id="user-rfc"
+                value={formRfc}
+                onChange={(e) => setFormRfc(e.target.value.toUpperCase())}
+                placeholder="GODE561231GR8"
+                className="font-mono"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                {ROLES_CON_RFC.includes(formRol)
+                  ? "Obligatorio para vendedores. 13 caracteres (física) o 12 (moral)."
+                  : "Opcional para este rol."}
+              </p>
             </div>
 
             <div>

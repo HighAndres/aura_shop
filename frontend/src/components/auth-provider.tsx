@@ -27,6 +27,8 @@ interface AuthContextValue {
     nombre?: string,
   ) => Promise<void>;
   logout: () => void;
+  /** Relee /users/me. Para cuando el propio usuario edita su perfil. */
+  refresh: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -50,6 +52,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     void cart.refresh();
   }, [cart]);
+
+  const refreshUser = useCallback(async () => {
+    try {
+      setUser(await auth.me());
+    } catch {
+      setUser(null);
+    }
+  }, []);
 
   // Inactivity timer: reset on user activity, logout when expired.
   useEffect(() => {
@@ -107,7 +117,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout: doLogout }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, register, logout: doLogout, refresh: refreshUser }}
+    >
       {children}
     </AuthContext.Provider>
   );

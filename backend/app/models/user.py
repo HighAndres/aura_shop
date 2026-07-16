@@ -32,6 +32,18 @@ class Usuario(UUIDPKMixin, TimestampMixin, OdooSyncMixin, Base):
     nombre_completo: Mapped[str | None] = mapped_column(String(255))
     telefono: Mapped[str | None] = mapped_column(String(32))
 
+    # RFC (México). 13 para persona física, 12 para moral.
+    # Nullable en la base porque los clientes de la tienda no lo dan: la
+    # obligatoriedad aplica al alta de vendedor y se valida en esa capa.
+    rfc: Mapped[str | None] = mapped_column(String(13), index=True)
+
+    # Dirección del vendedor. La captura él mismo desde su perfil y puede
+    # actualizarla si se muda; no se copia al pedido, que lleva la del cliente.
+    direccion_calle: Mapped[str | None] = mapped_column(String(255))
+    direccion_ciudad: Mapped[str | None] = mapped_column(String(120))
+    direccion_estado: Mapped[str | None] = mapped_column(String(120))
+    direccion_cp: Mapped[str | None] = mapped_column(String(10))
+
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
     # ¿Correo verificado? Necesario antes de operar según el método de registro.
     is_verified: Mapped[bool] = mapped_column(default=False, nullable=False)

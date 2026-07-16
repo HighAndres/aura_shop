@@ -8,39 +8,55 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_permissions
+from app.api.deps import (
+    get_current_active_user,
+    has_permission,
+    require_any_permission,
+    require_permissions,
+)
 from app.core import audit
+from app.core.order_state import (
+    PERMISO_POR_ESTADO,
+    TransicionInvalida,
+    permiso_para,
+    registrar_creacion,
+    transicionar,
+)
 from app.crud import inventory as crud_inv
-from app.crud.order import _etiqueta_variante, _siguiente_numero, restaurar_inventario
+from app.crud.order import _etiqueta_variante, _siguiente_numero
 from app.db.session import get_db
 from app.models.catalog import Variante
 from app.models.inventory import StockMovimiento, TipoMovimiento
-from app.models.order import EstadoPedido, Pedido, PedidoItem
+from app.models.order import EstadoPedido, OrigenTransicion, Pedido, PedidoItem
 from app.models.user import Usuario
-from app.schemas.order import PedidoRead
+from app.schemas.order import PedidoDetalleRead, PedidoRead
 
-ADMIN_ROLES = {"superadmin", "administrador"}
 ALMACEN_CHECKOUT = "PRINCIPAL"
+
+
+def _nombre(u: Usuario | None) -> str | None:
+    if u is None:
+        return None
+    return u.nombre_completo or u.email
 
 
 def _serialize_pedido(pedido: Pedido, db: Session) -> PedidoRead:
     data = PedidoRead.model_validate(pedido)
     if pedido.asignado_a:
-        asignado = db.get(Usuario, pedido.asignado_a)
-        if asignado:
-            data.asignado_a_nombre = asignado.nombre_completo or asignado.email
+        data.asignado_a_nombre = _nombre(db.get(Usuario, pedido.asignado_a))
+    return data
+
+
+def _serialize_detalle(pedido: Pedido, db: Session) -> PedidoDetalleRead:
+    data = PedidoDetalleRead.model_validate(pedido)
+    if pedido.asignado_a:
+        data.asignado_a_nombre = _nombre(db.get(Usuario, pedido.asignado_a))
+    # El actor viene precargado por el relationship, así que esto no consulta.
+    for asiento, leido in zip(pedido.historial, data.historial):
+        leido.actor_nombre = _nombre(asiento.actor)
     return data
 
 router = APIRouter(prefix="/admin/orders", tags=["admin-orders"])
-
-TRANSICIONES_VALIDAS: dict[str, list[str]] = {
-    "pendiente": ["pagado", "cancelado"],
-    "pagado": ["enviado", "cancelado"],
-    "enviado": ["entregado"],
-    "entregado": [],
-    "cancelado": [],
-}
-
 
 class PedidoPage(BaseModel):
     items: list[PedidoRead]
@@ -115,7 +131,9 @@ def crear_pedido_admin(
         usuario_id=None,
         asignado_a=current_user.id,
         email=body.email,
-        estado="pagado",
+        # Nace pendiente, igual que el checkout de la tienda: el pago lo
+        # confirma la pasarela, no el acto de levantar el pedido.
+        estado="pendiente",
         nombre_contacto=body.nombre_contacto,
         telefono=body.telefono,
         direccion_calle=body.direccion_calle,
@@ -153,6 +171,13 @@ def crear_pedido_admin(
     pedido.subtotal = subtotal
     pedido.total = subtotal
     db.add(pedido)
+    registrar_creacion(
+        db,
+        pedido,
+        origen=OrigenTransicion.USUARIO,
+        actor=current_user,
+        nota="Pedido levantado desde el panel",
+    )
 
     try:
         db.commit()
@@ -179,8 +204,7 @@ def crear_pedido_admin(
 @router.get(
     "",
     response_model=PedidoPage,
-    summary="Listar todos los pedidos (admin)",
-    dependencies=[Depends(require_permissions("pedidos.leer"))],
+    summary="Listar pedidos (todos, o solo los asignados según el rol)",
 )
 def listar_pedidos_admin(
     db: Session = Depends(get_db),
@@ -188,9 +212,17 @@ def listar_pedidos_admin(
     q: str | None = Query(default=None, description="buscar por número o email"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
+    current_user: Usuario = Depends(
+        require_any_permission("pedidos.leer", "pedidos.leer_asignados")
+    ),
 ) -> PedidoPage:
     query = select(Pedido)
     count_query = select(func.count()).select_from(Pedido)
+
+    # Quien no puede ver todos los pedidos solo ve los suyos.
+    if not has_permission(current_user, "pedidos.leer"):
+        query = query.where(Pedido.asignado_a == current_user.id)
+        count_query = count_query.where(Pedido.asignado_a == current_user.id)
 
     if estado:
         query = query.where(Pedido.estado == estado)
@@ -214,6 +246,30 @@ def listar_pedidos_admin(
     )
 
 
+@router.get(
+    "/{numero}",
+    response_model=PedidoDetalleRead,
+    summary="Detalle de un pedido, con su línea de tiempo de estados",
+)
+def detalle_pedido(
+    numero: str,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(
+        require_any_permission("pedidos.leer", "pedidos.leer_asignados")
+    ),
+) -> PedidoDetalleRead:
+    pedido = db.scalar(select(Pedido).where(Pedido.numero == numero))
+    if pedido is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Pedido no encontrado")
+
+    # Quien solo ve los suyos no debe poder abrir el de otro por número.
+    if not has_permission(current_user, "pedidos.leer"):
+        if pedido.asignado_a != current_user.id:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Pedido no encontrado")
+
+    return _serialize_detalle(pedido, db)
+
+
 @router.put(
     "/{numero}/estado",
     response_model=PedidoRead,
@@ -224,32 +280,45 @@ def cambiar_estado(
     body: CambiarEstadoIn,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_permissions("pedidos.editar")),
+    current_user: Usuario = Depends(get_current_active_user),
 ) -> PedidoRead:
+    if body.estado not in [e.value for e in EstadoPedido]:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Estado inválido: {body.estado}")
+
+    # El permiso se valida antes de buscar el pedido: si se hiciera después,
+    # el 404 vs 403 delataría qué números de pedido existen a quien no tiene
+    # permiso de tocarlos.
+    permiso = permiso_para(body.estado)
+    if permiso is None or not has_permission(current_user, permiso):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            f"No tienes permisos para marcar un pedido como '{body.estado}'",
+        )
+
     pedido = db.scalar(select(Pedido).where(Pedido.numero == numero))
     if pedido is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Pedido no encontrado")
 
-    if body.estado not in [e.value for e in EstadoPedido]:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Estado inválido: {body.estado}")
-
-    validos = TRANSICIONES_VALIDAS.get(pedido.estado, [])
-    if body.estado not in validos:
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST,
-            f"No se puede cambiar de '{pedido.estado}' a '{body.estado}'. "
-            f"Transiciones válidas: {validos}",
+    try:
+        estado_anterior = transicionar(
+            db,
+            pedido,
+            body.estado,
+            origen=OrigenTransicion.USUARIO,
+            actor=current_user,
+            nota=body.nota,
         )
+    except TransicionInvalida as e:
+        db.rollback()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
 
-    estado_anterior = pedido.estado
-    pedido.estado = body.estado
     db.commit()
     db.refresh(pedido)
 
     audit.registrar(
         db,
         actor=current_user,
-        accion="pedidos.editar",
+        accion=permiso,
         descripcion=f"Pedido {numero}: {estado_anterior} → {body.estado}",
         entidad="pedido",
         entidad_id=numero,
@@ -281,14 +350,20 @@ def cancelar_pedido(
 
     if pedido.estado == "cancelado":
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "El pedido ya está cancelado")
-    if pedido.estado == "entregado":
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST, "No se puede cancelar un pedido entregado"
-        )
 
-    estado_anterior = pedido.estado
-    pedido.estado = "cancelado"
-    restaurar_inventario(db, pedido)
+    try:
+        # La restauración de inventario la hace la propia transición.
+        estado_anterior = transicionar(
+            db,
+            pedido,
+            "cancelado",
+            origen=OrigenTransicion.USUARIO,
+            actor=current_user,
+        )
+    except TransicionInvalida as e:
+        db.rollback()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+
     db.commit()
     db.refresh(pedido)
 
@@ -320,14 +395,8 @@ def reasignar_pedido(
     body: ReasignarIn,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_permissions("pedidos.editar")),
+    current_user: Usuario = Depends(require_permissions("pedidos.reasignar")),
 ) -> PedidoRead:
-    if not ({r.nombre for r in current_user.roles} & ADMIN_ROLES):
-        raise HTTPException(
-            status.HTTP_403_FORBIDDEN,
-            "Solo administradores pueden reasignar pedidos",
-        )
-
     pedido = db.scalar(select(Pedido).where(Pedido.numero == numero))
     if pedido is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Pedido no encontrado")
@@ -348,7 +417,7 @@ def reasignar_pedido(
     audit.registrar(
         db,
         actor=current_user,
-        accion="pedidos.editar",
+        accion="pedidos.reasignar",
         descripcion=f"Pedido {numero} reasignado",
         entidad="pedido",
         entidad_id=numero,

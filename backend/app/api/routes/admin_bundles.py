@@ -74,7 +74,7 @@ def _serialize_paquete(p: Paquete) -> PaqueteAdminRead:
     "",
     response_model=PaqueteAdminPage,
     summary="Listar paquetes (admin)",
-    dependencies=[Depends(require_permissions("productos.leer"))],
+    dependencies=[Depends(require_permissions("paquetes.gestionar"))],
 )
 def listar_paquetes(
     db: Session = Depends(get_db),
@@ -110,7 +110,7 @@ def listar_paquetes(
     "/{paquete_id}",
     response_model=PaqueteAdminRead,
     summary="Detalle de paquete (admin)",
-    dependencies=[Depends(require_permissions("productos.leer"))],
+    dependencies=[Depends(require_permissions("paquetes.gestionar"))],
 )
 def detalle_paquete(
     paquete_id: str,
@@ -132,7 +132,7 @@ def crear_paquete(
     body: PaqueteCreate,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_permissions("productos.crear")),
+    current_user: Usuario = Depends(require_permissions("paquetes.gestionar")),
 ) -> PaqueteAdminRead:
     if db.scalar(select(Paquete).where(Paquete.slug == body.slug)):
         raise HTTPException(status.HTTP_409_CONFLICT, f"Slug ya existe: {body.slug}")
@@ -170,7 +170,7 @@ def crear_paquete(
     db.refresh(paquete)
 
     audit.registrar(
-        db, actor=current_user, accion="productos.crear",
+        db, actor=current_user, accion="paquetes.gestionar",
         descripcion=f"Paquete creado: {paquete.nombre}",
         entidad="paquete", entidad_id=str(paquete.id),
         cambios=body.model_dump(mode="json"), request=request,
@@ -188,7 +188,7 @@ def editar_paquete(
     body: PaqueteUpdate,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_permissions("productos.editar")),
+    current_user: Usuario = Depends(require_permissions("paquetes.gestionar")),
 ) -> PaqueteAdminRead:
     paquete = db.get(Paquete, paquete_id)
     if paquete is None:
@@ -225,7 +225,7 @@ def editar_paquete(
     db.refresh(paquete)
 
     audit.registrar(
-        db, actor=current_user, accion="productos.editar",
+        db, actor=current_user, accion="paquetes.gestionar",
         descripcion=f"Paquete editado: {paquete.nombre}",
         entidad="paquete", entidad_id=str(paquete.id),
         cambios=body.model_dump(exclude_unset=True, mode="json"), request=request,
@@ -242,7 +242,7 @@ def toggle_paquete(
     paquete_id: str,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_permissions("productos.editar")),
+    current_user: Usuario = Depends(require_permissions("paquetes.gestionar")),
 ) -> PaqueteAdminRead:
     paquete = db.get(Paquete, paquete_id)
     if paquete is None:
@@ -253,7 +253,7 @@ def toggle_paquete(
     db.refresh(paquete)
 
     audit.registrar(
-        db, actor=current_user, accion="productos.editar",
+        db, actor=current_user, accion="paquetes.gestionar",
         descripcion=f"Paquete {'activado' if paquete.activo else 'desactivado'}: {paquete.nombre}",
         entidad="paquete", entidad_id=str(paquete.id),
         cambios={"activo": paquete.activo}, request=request,
@@ -270,7 +270,7 @@ def eliminar_paquete(
     paquete_id: str,
     request: Request,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_permissions("productos.eliminar")),
+    current_user: Usuario = Depends(require_permissions("paquetes.gestionar")),
 ) -> None:
     paquete = db.get(Paquete, paquete_id)
     if paquete is None:
@@ -281,7 +281,7 @@ def eliminar_paquete(
     db.commit()
 
     audit.registrar(
-        db, actor=current_user, accion="productos.eliminar",
+        db, actor=current_user, accion="paquetes.gestionar",
         descripcion=f"Paquete eliminado: {nombre}",
         entidad="paquete", entidad_id=paquete_id,
         request=request,

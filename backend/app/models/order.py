@@ -10,6 +10,7 @@ from __future__ import annotations
 import enum
 import uuid
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
@@ -23,6 +24,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, OdooSyncMixin, TimestampMixin, UUIDPKMixin
 
+if TYPE_CHECKING:
+    from app.models.user import Usuario
+
 
 class EstadoPedido(str, enum.Enum):
     PENDIENTE = "pendiente"
@@ -30,6 +34,18 @@ class EstadoPedido(str, enum.Enum):
     ENVIADO = "enviado"
     ENTREGADO = "entregado"
     CANCELADO = "cancelado"
+
+
+class OrigenTransicion(str, enum.Enum):
+    """Qué provocó un cambio de estado.
+
+    Distinguir el origen es lo que permite auditar que "pagado" llegó por un
+    cobro real y no porque alguien apretó un botón.
+    """
+
+    USUARIO = "usuario"    # una persona desde el panel
+    PASARELA = "pasarela"  # webhook de la pasarela de pagos
+    SISTEMA = "sistema"    # proceso interno (expiraciones, sincronizaciones)
 
 
 class Pedido(UUIDPKMixin, TimestampMixin, OdooSyncMixin, Base):
@@ -84,9 +100,49 @@ class Pedido(UUIDPKMixin, TimestampMixin, OdooSyncMixin, Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    historial: Mapped[list[PedidoEstadoHistorial]] = relationship(
+        back_populates="pedido",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="PedidoEstadoHistorial.created_at",
+    )
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Pedido {self.numero} ({self.estado})>"
+
+
+class PedidoEstadoHistorial(UUIDPKMixin, TimestampMixin, Base):
+    """Rastro de cada cambio de estado de un pedido.
+
+    La bitácora general solo registra acciones de personas; esto también
+    guarda las de la pasarela y el sistema, y es la fuente para reconstruir
+    cuándo se pagó o se envió un pedido.
+    """
+
+    __tablename__ = "pedido_estado_historial"
+
+    pedido_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("pedidos.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    # Nulo en el asiento de creación del pedido.
+    estado_anterior: Mapped[str | None] = mapped_column(String(20))
+    estado_nuevo: Mapped[str] = mapped_column(String(20), nullable=False)
+    origen: Mapped[str] = mapped_column(String(20), nullable=False)
+    # Nulo cuando el origen no es una persona (pasarela, sistema).
+    actor_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("usuarios.id", ondelete="SET NULL"), index=True
+    )
+    nota: Mapped[str | None] = mapped_column(Text)
+    # Referencia externa: id de transacción de la pasarela, guía de envío, etc.
+    referencia: Mapped[str | None] = mapped_column(String(120))
+
+    pedido: Mapped[Pedido] = relationship(back_populates="historial")
+    # selectin y no lazy por defecto: al serializar la línea de tiempo se
+    # necesita el nombre de cada actor, y una consulta por asiento sería N+1.
+    actor: Mapped["Usuario | None"] = relationship(lazy="selectin")
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<PedidoEstadoHistorial {self.estado_anterior}->{self.estado_nuevo}>"
 
 
 class PedidoItem(UUIDPKMixin, TimestampMixin, Base):
