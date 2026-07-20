@@ -4,6 +4,7 @@ import { apiFetch, ApiError } from "@/lib/api";
 import type {
   Categoria,
   Marca,
+  PaquetesPage,
   ProductoDetalle,
   ProductosPage,
 } from "@/lib/types";
@@ -35,6 +36,14 @@ export function getProductos(params: ListarProductosParams = {}) {
   if (params.offset !== undefined) qs.set("offset", String(params.offset));
   const query = qs.toString();
   return apiFetch<ProductosPage>(`/catalog/productos${query ? `?${query}` : ""}`);
+}
+
+export function getPaquetes(params: { limit?: number; offset?: number } = {}) {
+  const qs = new URLSearchParams();
+  if (params.limit !== undefined) qs.set("limit", String(params.limit));
+  if (params.offset !== undefined) qs.set("offset", String(params.offset));
+  const query = qs.toString();
+  return apiFetch<PaquetesPage>(`/catalog/paquetes${query ? `?${query}` : ""}`);
 }
 
 /** Devuelve el detalle del producto o null si no existe (404). */

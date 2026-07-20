@@ -2,23 +2,27 @@ import Link from "next/link";
 import Image from "next/image";
 import { Sparkles, ArrowRight, Star } from "lucide-react";
 
+import { BundleCard } from "@/components/bundle-card";
 import { ProductCard } from "@/components/product-card";
 import { Button } from "@/components/ui/button";
-import { getCategorias, getProductos } from "@/lib/catalog";
-import type { Categoria, ProductoListItem } from "@/lib/types";
+import { getCategorias, getPaquetes, getProductos } from "@/lib/catalog";
+import type { Categoria, PaquetePublico, ProductoListItem } from "@/lib/types";
 
 export default async function HomePage() {
   let destacados: ProductoListItem[] = [];
   let categorias: Categoria[] = [];
+  let paquetes: PaquetePublico[] = [];
   let errorApi = false;
 
   try {
-    const [page, cats] = await Promise.all([
+    const [page, cats, packs] = await Promise.all([
       getProductos({ destacado: true, limit: 8 }),
       getCategorias(),
+      getPaquetes({ limit: 3 }),
     ]);
     destacados = page.items;
     categorias = cats;
+    paquetes = packs.items;
   } catch {
     errorApi = true;
   }
@@ -135,6 +139,29 @@ export default async function HomePage() {
               ))}
             </div>
           </section>
+
+          {/* Paquetes */}
+          {paquetes.length > 0 && (
+            <section className="space-y-5">
+              <div>
+                <h2 className="text-2xl font-semibold">Paquetes</h2>
+                <p className="text-sm text-muted-foreground">
+                  Combinaciones armadas para ti, a mejor precio
+                </p>
+              </div>
+              <div className="grid gap-x-4 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
+                {paquetes.map((p, i) => (
+                  <div
+                    key={p.id}
+                    className="animate-fade-up opacity-0 [animation-fill-mode:forwards]"
+                    style={{ animationDelay: `${0.1 + i * 0.07}s` }}
+                  >
+                    <BundleCard paquete={p} />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* CTA banner */}
           <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary to-primary/80 px-8 py-12 text-center text-primary-foreground animate-fade-up [animation-delay:0.5s] opacity-0 [animation-fill-mode:forwards]">

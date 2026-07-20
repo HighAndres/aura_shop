@@ -3,9 +3,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.crud import bundle as crud_bundle
 from app.crud import catalog as crud
 from app.crud import inventory as crud_inv
 from app.db.session import get_db
+from app.schemas.bundle import PaquetePublic, PaquetesPublicPage
 from app.schemas.catalog import (
     CategoriaRead,
     MarcaRead,
@@ -59,6 +61,39 @@ def listar_productos(
         limit=limit,
         offset=offset,
     )
+
+
+@router.get(
+    "/paquetes",
+    response_model=PaquetesPublicPage,
+    summary="Listar paquetes activos",
+)
+def listar_paquetes(
+    db: Session = Depends(get_db),
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+) -> PaquetesPublicPage:
+    items, total = crud_bundle.list_paquetes_activos(db, limit=limit, offset=offset)
+    return PaquetesPublicPage(
+        items=[crud_bundle.serialize_public(p) for p in items],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get(
+    "/paquetes/{slug}",
+    response_model=PaquetePublic,
+    summary="Detalle de paquete por slug",
+)
+def detalle_paquete(slug: str, db: Session = Depends(get_db)) -> PaquetePublic:
+    paquete = crud_bundle.get_paquete_activo_by_slug(db, slug)
+    if paquete is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Paquete no encontrado"
+        )
+    return crud_bundle.serialize_public(paquete)
 
 
 @router.get(

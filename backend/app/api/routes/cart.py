@@ -4,11 +4,18 @@ from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user, get_current_user_optional
+from app.crud import bundle as crud_bundle
 from app.crud import cart as crud
 from app.db.session import get_db
 from app.models.cart import Carrito
 from app.models.user import Usuario
-from app.schemas.cart import CartItemIn, CartItemUpdate, CartRead, MergeRequest
+from app.schemas.cart import (
+    CartItemIn,
+    CartItemUpdate,
+    CartPaqueteIn,
+    CartRead,
+    MergeRequest,
+)
 
 router = APIRouter(prefix="/cart", tags=["cart"])
 
@@ -88,6 +95,60 @@ def quitar_item(
     variante = crud.get_variante_by_sku(db, sku)
     if variante is not None:
         crud.remove_item(db, cart, variante.id)
+    return crud.serialize_cart(db, cart)
+
+
+@router.post("/paquetes", response_model=CartRead, summary="Agregar paquete al carrito")
+def agregar_paquete(
+    body: CartPaqueteIn,
+    db: Session = Depends(get_db),
+    user: Usuario | None = Depends(get_current_user_optional),
+    x_cart_token: str | None = Header(default=None, alias="X-Cart-Token"),
+) -> CartRead:
+    paquete = crud_bundle.get_paquete_activo_by_slug(db, body.slug)
+    if paquete is None:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, f"Paquete no disponible: {body.slug}"
+        )
+    cart = _resolve(db, user, x_cart_token, create=True)
+    crud.add_paquete(db, cart, paquete, body.cantidad)
+    return crud.serialize_cart(db, cart)
+
+
+@router.put(
+    "/paquetes/{slug}", response_model=CartRead, summary="Actualizar cantidad de paquete"
+)
+def actualizar_paquete(
+    slug: str,
+    body: CartItemUpdate,
+    db: Session = Depends(get_db),
+    user: Usuario | None = Depends(get_current_user_optional),
+    x_cart_token: str | None = Header(default=None, alias="X-Cart-Token"),
+) -> CartRead:
+    cart = _resolve(db, user, x_cart_token, create=False)
+    if cart is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Carrito no encontrado")
+    paquete = crud_bundle.get_paquete_activo_by_slug(db, slug)
+    if paquete is None or not crud.set_paquete(db, cart, paquete.id, body.cantidad):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Paquete no está en el carrito")
+    return crud.serialize_cart(db, cart)
+
+
+@router.delete(
+    "/paquetes/{slug}", response_model=CartRead, summary="Quitar paquete del carrito"
+)
+def quitar_paquete(
+    slug: str,
+    db: Session = Depends(get_db),
+    user: Usuario | None = Depends(get_current_user_optional),
+    x_cart_token: str | None = Header(default=None, alias="X-Cart-Token"),
+) -> CartRead:
+    cart = _resolve(db, user, x_cart_token, create=False)
+    if cart is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Carrito no encontrado")
+    linea = next((lp for lp in cart.paquetes if lp.paquete.slug == slug), None)
+    if linea is not None:
+        crud.remove_paquete(db, cart, linea.paquete_id)
     return crud.serialize_cart(db, cart)
 
 

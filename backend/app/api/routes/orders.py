@@ -34,7 +34,7 @@ def checkout(
         cart = crud_cart.get_cart_by_token(db, x_cart_token)
     else:
         cart = None
-    if cart is None or not cart.items:
+    if cart is None or (not cart.items and not cart.paquetes):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "El carrito está vacío")
 
     try:
