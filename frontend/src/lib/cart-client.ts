@@ -90,6 +90,32 @@ export function removeCartItem(sku: string) {
   );
 }
 
+export function addPaqueteToCart(slug: string, cantidad = 1) {
+  return asCart(
+    request<Cart>("/cart/paquetes", {
+      method: "POST",
+      body: JSON.stringify({ slug, cantidad }),
+    }),
+  );
+}
+
+export function updateCartPaquete(slug: string, cantidad: number) {
+  return asCart(
+    request<Cart>(`/cart/paquetes/${encodeURIComponent(slug)}`, {
+      method: "PUT",
+      body: JSON.stringify({ cantidad }),
+    }),
+  );
+}
+
+export function removeCartPaquete(slug: string) {
+  return asCart(
+    request<Cart>(`/cart/paquetes/${encodeURIComponent(slug)}`, {
+      method: "DELETE",
+    }),
+  );
+}
+
 export function checkout(payload: CheckoutPayload) {
   return request<Pedido>("/orders/checkout", {
     method: "POST",

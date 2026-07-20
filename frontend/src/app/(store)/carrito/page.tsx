@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
+import { Gift, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 
 import { useCart } from "@/components/cart-provider";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatMXN } from "@/lib/format";
 
 export default function CarritoPage() {
-  const { cart, loading, setQty, remove } = useCart();
+  const { cart, loading, setQty, remove, setPaqueteQty, removePaquete } = useCart();
 
   if (loading) {
     return (
@@ -22,7 +22,7 @@ export default function CarritoPage() {
     );
   }
 
-  if (!cart || cart.items.length === 0) {
+  if (!cart || (cart.items.length === 0 && cart.paquetes.length === 0)) {
     return (
       <div className="mx-auto max-w-md py-16 text-center">
         <ShoppingBag className="mx-auto size-10 text-muted-foreground" />
@@ -112,6 +112,80 @@ export default function CarritoPage() {
                     className="size-8 text-muted-foreground hover:text-destructive"
                     aria-label="Quitar"
                     onClick={() => remove(item.sku)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            </li>
+          ))}
+
+          {cart.paquetes.map((p) => (
+            <li key={p.paquete_id} className="flex gap-4 rounded-xl border p-3">
+              <div className="relative size-20 shrink-0 overflow-hidden rounded-lg bg-muted">
+                {p.imagen ? (
+                  <Image
+                    src={p.imagen}
+                    alt={p.nombre}
+                    fill
+                    sizes="80px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center">
+                    <Gift className="size-6 text-muted-foreground/40" />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex min-w-0 flex-1 flex-col">
+                <p className="line-clamp-2 text-sm font-medium">
+                  Paquete: {p.nombre}
+                </p>
+                <p className="line-clamp-1 text-xs text-muted-foreground">
+                  {p.contenido.join(" · ")}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {formatMXN(p.precio_unitario)}
+                </p>
+
+                <div className="mt-auto flex items-center justify-between gap-2 pt-2">
+                  <div className="flex items-center rounded-lg border">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8"
+                      aria-label="Disminuir"
+                      disabled={p.cantidad <= 1}
+                      onClick={() => setPaqueteQty(p.slug, p.cantidad - 1)}
+                    >
+                      <Minus className="size-4" />
+                    </Button>
+                    <span className="w-8 text-center text-sm tabular-nums">
+                      {p.cantidad}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8"
+                      aria-label="Aumentar"
+                      disabled={p.cantidad >= p.disponible}
+                      onClick={() => setPaqueteQty(p.slug, p.cantidad + 1)}
+                    >
+                      <Plus className="size-4" />
+                    </Button>
+                  </div>
+
+                  <span className="text-sm font-semibold">
+                    {formatMXN(p.subtotal)}
+                  </span>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 text-muted-foreground hover:text-destructive"
+                    aria-label="Quitar"
+                    onClick={() => removePaquete(p.slug)}
                   >
                     <Trash2 className="size-4" />
                   </Button>

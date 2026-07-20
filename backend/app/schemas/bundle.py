@@ -49,6 +49,38 @@ class PaqueteUpdate(BaseModel):
     items: list[PaqueteItemIn] | None = None
 
 
+class PaqueteItemPublic(BaseModel):
+    """Contenido de un paquete tal como lo ve la tienda."""
+
+    producto_nombre: str
+    producto_slug: str | None = None
+    variante_sku: str | None = None
+    cantidad: int
+
+
+class PaquetePublic(BaseModel):
+    """Paquete visible en la tienda (solo activos)."""
+
+    id: uuid.UUID
+    nombre: str
+    slug: str
+    descripcion: str | None = None
+    descripcion_corta: str | None = None
+    imagen_url: str | None = None
+    precio_paquete: Decimal
+    precio_individual: Decimal
+    ahorro: Decimal
+    destacado: bool
+    items: list[PaqueteItemPublic] = []
+
+
+class PaquetesPublicPage(BaseModel):
+    items: list[PaquetePublic]
+    total: int
+    limit: int
+    offset: int
+
+
 class PaqueteAdminRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

@@ -69,6 +69,36 @@ export interface ProductosPage {
   offset: number;
 }
 
+// --- Paquetes (tienda pública) ---
+
+export interface PaqueteItemPublico {
+  producto_nombre: string;
+  producto_slug: string | null;
+  variante_sku: string | null;
+  cantidad: number;
+}
+
+export interface PaquetePublico {
+  id: string;
+  nombre: string;
+  slug: string;
+  descripcion: string | null;
+  descripcion_corta: string | null;
+  imagen_url: string | null;
+  precio_paquete: string;
+  precio_individual: string;
+  ahorro: string;
+  destacado: boolean;
+  items: PaqueteItemPublico[];
+}
+
+export interface PaquetesPage {
+  items: PaquetePublico[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 // --- Usuario / auth ---
 
 export interface Usuario {
@@ -113,10 +143,23 @@ export interface CartItem {
   disponible: number;
 }
 
+export interface CartPaquete {
+  paquete_id: string;
+  slug: string;
+  nombre: string;
+  imagen: string | null;
+  contenido: string[];
+  precio_unitario: string;
+  cantidad: number;
+  subtotal: string;
+  disponible: number;
+}
+
 export interface Cart {
   id: string | null;
   token: string | null;
   items: CartItem[];
+  paquetes: CartPaquete[];
   total_items: number;
   subtotal: string;
 }

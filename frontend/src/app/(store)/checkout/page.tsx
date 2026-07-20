@@ -42,7 +42,7 @@ export default function CheckoutPage() {
     );
   }
 
-  if (!cart || cart.items.length === 0) {
+  if (!cart || (cart.items.length === 0 && cart.paquetes.length === 0)) {
     return (
       <div className="mx-auto max-w-md py-16 text-center">
         <h1 className="text-xl font-semibold">No hay nada que pagar</h1>
@@ -195,6 +195,14 @@ export default function CheckoutPage() {
                   {it.cantidad}× {it.nombre}
                 </span>
                 <span className="shrink-0">{formatMXN(it.subtotal)}</span>
+              </li>
+            ))}
+            {cart.paquetes.map((p) => (
+              <li key={p.paquete_id} className="flex justify-between gap-2">
+                <span className="min-w-0 truncate text-muted-foreground">
+                  {p.cantidad}× Paquete: {p.nombre}
+                </span>
+                <span className="shrink-0">{formatMXN(p.subtotal)}</span>
               </li>
             ))}
           </ul>

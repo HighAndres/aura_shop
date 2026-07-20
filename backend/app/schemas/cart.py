@@ -27,11 +27,30 @@ class CartItemRead(BaseModel):
     disponible: int
 
 
+class CartPaqueteIn(BaseModel):
+    slug: str
+    cantidad: int = Field(default=1, ge=1, le=999)
+
+
+class CartPaqueteRead(BaseModel):
+    paquete_id: uuid.UUID
+    slug: str
+    nombre: str
+    imagen: str | None = None
+    contenido: list[str] = []
+    precio_unitario: Decimal
+    cantidad: int
+    subtotal: Decimal
+    # Cuántos paquetes completos alcanza a armar el stock actual.
+    disponible: int
+
+
 class CartRead(BaseModel):
     id: uuid.UUID | None = None
     # Token del carrito de invitado (el cliente debe guardarlo y reenviarlo).
     token: str | None = None
     items: list[CartItemRead] = []
+    paquetes: list[CartPaqueteRead] = []
     total_items: int = 0
     subtotal: Decimal = Decimal("0.00")
 

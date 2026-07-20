@@ -18,6 +18,9 @@ interface CartContextValue {
   add: (sku: string, cantidad?: number) => Promise<void>;
   setQty: (sku: string, cantidad: number) => Promise<void>;
   remove: (sku: string) => Promise<void>;
+  addPaquete: (slug: string, cantidad?: number) => Promise<void>;
+  setPaqueteQty: (slug: string, cantidad: number) => Promise<void>;
+  removePaquete: (slug: string) => Promise<void>;
   refresh: () => Promise<void>;
   clear: () => void;
 }
@@ -69,13 +72,52 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [refresh]);
 
+  const addPaquete = useCallback(async (slug: string, cantidad = 1) => {
+    try {
+      setCart(await api.addPaqueteToCart(slug, cantidad));
+    } catch {
+      await refresh();
+      throw new Error("No se pudo agregar el paquete al carrito");
+    }
+  }, [refresh]);
+
+  const setPaqueteQty = useCallback(async (slug: string, cantidad: number) => {
+    try {
+      setCart(await api.updateCartPaquete(slug, cantidad));
+    } catch {
+      await refresh();
+      throw new Error("No se pudo actualizar la cantidad");
+    }
+  }, [refresh]);
+
+  const removePaquete = useCallback(async (slug: string) => {
+    try {
+      setCart(await api.removeCartPaquete(slug));
+    } catch {
+      await refresh();
+      throw new Error("No se pudo eliminar el paquete");
+    }
+  }, [refresh]);
+
   const clear = useCallback(() => setCart(null), []);
 
   const count = cart?.total_items ?? 0;
 
   return (
     <CartContext.Provider
-      value={{ cart, loading, count, add, setQty, remove, refresh, clear }}
+      value={{
+        cart,
+        loading,
+        count,
+        add,
+        setQty,
+        remove,
+        addPaquete,
+        setPaqueteQty,
+        removePaquete,
+        refresh,
+        clear,
+      }}
     >
       {children}
     </CartContext.Provider>

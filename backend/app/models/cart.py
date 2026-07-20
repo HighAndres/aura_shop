@@ -34,6 +34,11 @@ class Carrito(UUIDPKMixin, TimestampMixin, Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    paquetes: Mapped[list[CarritoPaquete]] = relationship(
+        back_populates="carrito",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Carrito {self.id} ({self.estado})>"
@@ -59,3 +64,32 @@ class CarritoItem(UUIDPKMixin, TimestampMixin, Base):
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<CarritoItem {self.variante_id} x{self.cantidad}>"
+
+
+class CarritoPaquete(UUIDPKMixin, TimestampMixin, Base):
+    """Línea de paquete en el carrito.
+
+    Va aparte de los items sueltos porque su precio es el del paquete, no la
+    suma de sus componentes; al hacer checkout se expande a sus variantes
+    para descontar inventario.
+    """
+
+    __tablename__ = "carrito_paquetes"
+    __table_args__ = (
+        UniqueConstraint("carrito_id", "paquete_id", name="uq_carrito_paquete"),
+        CheckConstraint("cantidad > 0", name="ck_carrito_paquete_cantidad"),
+    )
+
+    carrito_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("carritos.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    paquete_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("paquetes.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    cantidad: Mapped[int] = mapped_column(nullable=False)
+
+    carrito: Mapped[Carrito] = relationship(back_populates="paquetes")
+    paquete = relationship("Paquete", lazy="selectin")
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<CarritoPaquete {self.paquete_id} x{self.cantidad}>"

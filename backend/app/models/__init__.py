@@ -16,7 +16,7 @@ from app.models.catalog import (
 )
 from app.models.audit import Auditoria
 from app.models.bundle import Paquete, PaqueteItem
-from app.models.cart import Carrito, CarritoItem
+from app.models.cart import Carrito, CarritoItem, CarritoPaquete
 from app.models.inventory import (
     Almacen,
     Lote,
@@ -54,6 +54,7 @@ __all__ = [
     # carrito
     "Carrito",
     "CarritoItem",
+    "CarritoPaquete",
     # pedidos
     "Pedido",
     "PedidoItem",
