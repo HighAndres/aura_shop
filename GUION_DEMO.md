@@ -31,7 +31,53 @@ pedido se marca "pagado" solo** — que era la queja original de la clienta.
 - [ ] Probar la vista móvil si la clienta la va a pedir (el buscador móvil con overlay es de los features nuevos).
 - [ ] Tener a la mano un pedido ya `pagado` y otro `enviado` para que los reportes y el historial no se vean vacíos.
 
-## 3. Guion sugerido (20–30 min)
+## 3. Chuleta de datos (verificados en la base el 20 jul 2026)
+
+### Usuarios para la demo (contraseñas: en tu gestor, no van aquí)
+
+| Rol | Usuario sugerido |
+|-----|------------------|
+| Super Admin | `superadmin@aurashop.mirmiapps.com` |
+| Admin | `admin@aurashop.mirmiapps.com` |
+| Vendedor | `vendedor@aurashop.mirmiapps.com` |
+| Cliente | `cliente@aurashop.mirmiapps.com` |
+
+También existen `*@mirmibug.com` (admin, superadmin, vendedor) y `admin@aura.mx`
+(superadmin) — usar un solo juego para no confundirse en vivo.
+
+### SKUs para levantar pedidos en vivo (con stock de sobra)
+
+| SKU | Producto | Precio | Stock | Por qué este |
+|-----|----------|--------|-------|--------------|
+| `LAB-MATE-ROJO` | Labial Mate Larga Duración (Tono Rojo) | $199 | 50 | Tiene **3 variantes** (Rojo/Nude/Coral) — luce el selector de variantes |
+| `PALETA-SUNSET-001` | Paleta de Sombras Sunset | $399 | 60 | Destacado en el home; fácil de mostrar tienda → pedido |
+| `SERUM-VITC-30ML` | Serum Vitamina C 30 ml | $399 | 40 | Variantes por tamaño (30/50 ml, precio distinto) |
+| `SOLAR-SPF50-001` | Protector Solar SPF 50+ | $459 | 56 | Destacado, marca reconocible (La Roche-Posay) |
+| `BRUMA-100` | Bruma Facial Hidratante | $149 | 80 | El de mayor stock — el "seguro" si algo falla |
+
+Ticket bonito para el cierre: paleta + labial + serum ≈ $997.
+
+### Pedidos existentes para enseñar estados e historial
+
+| Número | Estado | Total | Sirve para |
+|--------|--------|-------|------------|
+| `AURA-000008` | entregado | $189 | Ciclo completo con historial |
+| `AURA-000007` | pagado | $289 | Mostrar un pedido pagado reciente (14 jul) |
+| `AURA-000002` | enviado | $1,248 | Vista de admin: acciones sobre enviado |
+| `AURA-000005` | cancelado | $846 | Mostrar que cancelar restaura stock |
+
+### Limpieza pendiente ANTES de la demo (detectada el 20 jul)
+
+- [ ] **`AURA-000004`** lleva `pendiente` desde el **21 de junio** ($1,506) — está
+  reservando stock. Cancelarlo (y de paso es el ejemplo perfecto de por qué viene
+  el job de expiración en la fase de pagos).
+- [ ] El producto **`0001` / "bloqueador solar"** ($300) es basura de pruebas: nombre
+  en minúsculas, SKU `0001`, duplica al Protector Solar real. Desactivarlo para que
+  no salga en el catálogo durante la demo.
+- [ ] `admin@aurashop.mirmiapps.com` tiene roles `administrador` **e** `invitado` a la
+  vez — revisar que no cause rarezas en el menú; si estorba, quitarle `invitado`.
+
+## 4. Guion sugerido (20–30 min)
 
 ### a) La tienda (como cliente final) — 5 min
 1. Home, categorías, buscador (probar también en móvil: el overlay expandible).
@@ -40,7 +86,7 @@ pedido se marca "pagado" solo** — que era la queja original de la clienta.
 
 ### b) El vendedor — 8 min (la estrella de la demo)
 1. Entrar como vendedor: enseñar que el menú es **corto a propósito** — solo lo que necesita.
-2. Levantar un pedido en vivo buscando por SKU.
+2. Levantar un pedido en vivo buscando por SKU (usar `LAB-MATE-ROJO` — ver chuleta).
 3. Mostrar que nace en `pendiente` y explicar el flujo real: *"el vendedor le pasa
    al cliente un link de pago; cuando el banco confirma, el sistema lo marca pagado solo"*.
 4. Reportes del vendedor: **solo ve sus propias ventas**, y las puede bajar en Excel.
@@ -58,7 +104,7 @@ pedido se marca "pagado" solo** — que era la queja original de la clienta.
 - Resumen: roles reales, pedidos con trazabilidad, reportes por rol.
 - Siguiente fase (ver sección 4): pasarela de pagos.
 
-## 4. Preguntas que van a salir — y la respuesta acordada
+## 5. Preguntas que van a salir — y la respuesta acordada
 
 - **"¿Y cómo se cobra?"** → Fase siguiente: Mercado Pago. El vendedor manda un link
   de pago y el sistema marca `pagado` automático vía webhook — el enganche técnico
@@ -74,7 +120,7 @@ pedido se marca "pagado" solo** — que era la queja original de la clienta.
   operativo — es exactamente lo que se cerró a propósito.
 - **Odoo** → scopeado aparte, después de la demo.
 
-## 5. Si algo falla en vivo
+## 6. Si algo falla en vivo
 
 - **Menú vacío / errores raros tras login** → refrescar con Cmd+Shift+R primero;
   si persiste, es señal de backend: `ssh andresadmin@69.6.207.137 -p 22022` y
