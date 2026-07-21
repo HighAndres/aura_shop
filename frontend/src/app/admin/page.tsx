@@ -66,6 +66,10 @@ export default function AdminDashboardPage() {
   // Las métricas globales salen del reporte de ventas, que solo trae el total
   // de la tienda a quien puede ver todos los pedidos.
   const isAdmin = can(user, PERM.PEDIDOS_LEER);
+  // Quién trabaja con pedidos (para no mostrar tarjetas/acciones de pedidos a
+  // un rol como el comercial, que no tiene ningún acceso a pedidos).
+  const verPedidos =
+    can(user, PERM.PEDIDOS_LEER) || can(user, PERM.PEDIDOS_LEER_ASIGNADOS);
 
   useEffect(() => {
     async function load() {
@@ -82,18 +86,20 @@ export default function AdminDashboardPage() {
         totalUsuarios: 0,
       };
 
-      try {
-        const [all, pend, pagados, enviados] = await Promise.all([
-          adminFetch<PedidoPage>("/admin/orders?limit=1&offset=0"),
-          adminFetch<PedidoPage>("/admin/orders?limit=1&offset=0&estado=pendiente"),
-          adminFetch<PedidoPage>("/admin/orders?limit=1&offset=0&estado=pagado"),
-          adminFetch<PedidoPage>("/admin/orders?limit=1&offset=0&estado=enviado"),
-        ]);
-        s.totalPedidos = all.total;
-        s.pedidosPendientes = pend.total;
-        s.pedidosPagados = pagados.total;
-        s.pedidosEnviados = enviados.total;
-      } catch {}
+      if (verPedidos) {
+        try {
+          const [all, pend, pagados, enviados] = await Promise.all([
+            adminFetch<PedidoPage>("/admin/orders?limit=1&offset=0"),
+            adminFetch<PedidoPage>("/admin/orders?limit=1&offset=0&estado=pendiente"),
+            adminFetch<PedidoPage>("/admin/orders?limit=1&offset=0&estado=pagado"),
+            adminFetch<PedidoPage>("/admin/orders?limit=1&offset=0&estado=enviado"),
+          ]);
+          s.totalPedidos = all.total;
+          s.pedidosPendientes = pend.total;
+          s.pedidosPagados = pagados.total;
+          s.pedidosEnviados = enviados.total;
+        } catch {}
+      }
 
       if (verInventario) {
         try {
@@ -121,7 +127,7 @@ export default function AdminDashboardPage() {
       setLoading(false);
     }
     load();
-  }, [isAdmin, verInventario]);
+  }, [isAdmin, verInventario, verPedidos]);
 
   return (
     <div className="space-y-6">
@@ -171,6 +177,8 @@ export default function AdminDashboardPage() {
         <>
           {/* Vendedor cards */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {verPedidos && (
+              <>
             <Link href="/admin/pedidos?estado=pendiente">
               <Card className="transition-all hover:shadow-md hover:-translate-y-0.5 animate-fade-up" style={{ animationDelay: "0.1s", opacity: 0 }}>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -227,6 +235,8 @@ export default function AdminDashboardPage() {
                 </CardContent>
               </Card>
             </Link>
+              </>
+            )}
 
             {verInventario && (
               <Link href="/admin/inventario">
@@ -312,22 +322,24 @@ export default function AdminDashboardPage() {
       <div className="animate-fade-up" style={{ animationDelay: "0.45s", opacity: 0 }}>
         <h2 className="text-lg font-semibold mb-3">Acciones rápidas</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <Link href="/admin/pedidos">
-            <Card className="group transition-all hover:shadow-md hover:-translate-y-0.5 cursor-pointer">
-              <CardContent className="flex items-center gap-3 p-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                  <Plus className="h-5 w-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">Levantar pedido</p>
-                  <p className="text-xs text-muted-foreground">
-                    Crear pedido directamente con el cliente
-                  </p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-              </CardContent>
-            </Card>
-          </Link>
+          {verPedidos && (
+            <Link href="/admin/pedidos">
+              <Card className="group transition-all hover:shadow-md hover:-translate-y-0.5 cursor-pointer">
+                <CardContent className="flex items-center gap-3 p-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                    <Plus className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">Levantar pedido</p>
+                    <p className="text-xs text-muted-foreground">
+                      Crear pedido directamente con el cliente
+                    </p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                </CardContent>
+              </Card>
+            </Link>
+          )}
 
           {gestionarProductos && (
             <Link href="/admin/productos">

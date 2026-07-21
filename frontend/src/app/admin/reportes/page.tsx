@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/table";
 import { adminFetch } from "@/lib/admin-api";
 import { formatMXN } from "@/lib/format";
+import { PERM, can } from "@/lib/permissions";
 import type { VentasResumen, InventarioResumen } from "@/lib/types";
 
 const ESTADO_LABELS: Record<string, string> = {
@@ -215,8 +216,14 @@ export default function AdminReportesPage() {
   const [loadingInv, setLoadingInv] = useState(true);
 
   const isSuperadmin = user?.roles.includes("superadmin");
-  const isAdmin = user?.roles.includes("administrador") || isSuperadmin;
-  const isVendedor = user?.roles.includes("vendedor") && !isAdmin;
+  // Gating por permiso (no por rol): el comercial ve ventas globales pero
+  // no inventario. "Ver todo" es tener pedidos.leer (admin) o el permiso
+  // explícito reportes.ver_todo (comercial); mismo criterio que el backend.
+  const veGlobal =
+    can(user, PERM.PEDIDOS_LEER) || can(user, PERM.REPORTES_VER_TODO);
+  const veInventario = can(user, PERM.INVENTARIO_LEER);
+  // La vista personal es para quien lee reportes pero no ve cifras globales.
+  const isVendedor = can(user, PERM.REPORTES_LEER) && !veGlobal;
 
   useEffect(() => {
     setLoadingVentas(true);
@@ -227,7 +234,7 @@ export default function AdminReportesPage() {
   }, [dias]);
 
   useEffect(() => {
-    if (!isVendedor) {
+    if (veInventario) {
       adminFetch<InventarioResumen>("/admin/reports/inventario")
         .then(setInventario)
         .catch(() => setInventario(null))
@@ -235,15 +242,15 @@ export default function AdminReportesPage() {
     } else {
       setLoadingInv(false);
     }
-  }, [isVendedor]);
+  }, [veInventario]);
 
   const diasLabel = dias === "7" ? "7 días" : dias === "30" ? "30 días" : dias === "90" ? "90 días" : "1 año";
 
   const headerDesc = isVendedor
     ? "Tu rendimiento personal y pedidos asignados"
-    : isSuperadmin
+    : veInventario
       ? "Métricas globales de la tienda, ventas e inventario"
-      : "Ventas, métricas e inventario de la tienda";
+      : "Ventas y métricas globales de la tienda";
 
   return (
     <div className="space-y-8">
@@ -449,9 +456,9 @@ export default function AdminReportesPage() {
       )}
 
       {/* ══════════════════════════════════════════════════════════
-          ADMIN / SUPERADMIN — Ventas globales de la tienda
+          Ventas globales de la tienda (admin, superadmin, comercial)
          ══════════════════════════════════════════════════════════ */}
-      {isAdmin && (
+      {veGlobal && (
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -660,9 +667,9 @@ export default function AdminReportesPage() {
       )}
 
       {/* ══════════════════════════════════════════════════════════
-          ADMIN / SUPERADMIN — Inventario
+          Inventario (quien tenga inventario.leer: admin, superadmin)
          ══════════════════════════════════════════════════════════ */}
-      {isAdmin && (
+      {veInventario && (
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold flex items-center gap-2">
