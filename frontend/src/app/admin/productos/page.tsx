@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
+import { PERM, can, canAny } from "@/lib/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,7 +54,6 @@ import type {
 } from "@/lib/types";
 
 const PAGE_SIZE = 20;
-const PRICE_ROLES = ["superadmin", "administrador"];
 
 interface VarianteForm {
   sku: string;
@@ -99,9 +99,14 @@ function slugify(text: string): string {
 export default function AdminProductosPage() {
   const { user } = useAuth();
 
-  const canPrice = user?.roles.some((r) => PRICE_ROLES.includes(r)) ?? false;
-  const canDelete = user?.roles.some((r) => r === "superadmin") ?? false;
-  const canManageCatalog = canPrice;
+  // Espejo de las reglas del backend: "editar" fija precios y publica;
+  // quien solo tiene "crear" (comercial) deja altas en borrador.
+  const canPrice = can(user, PERM.PRODUCTOS_EDITAR);
+  const canDelete = can(user, PERM.PRODUCTOS_ELIMINAR);
+  const canManageCatalog = canAny(user, [
+    PERM.MARCAS_GESTIONAR,
+    PERM.CATEGORIAS_GESTIONAR,
+  ]);
 
   const [data, setData] = useState<ProductoAdminPage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -500,15 +505,17 @@ export default function AdminProductosPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => openEdit(p)}
-                          title="Editar"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
+                        {canPrice && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openEdit(p)}
+                            title="Editar"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
                         {canPrice && (
                           <Button
                             variant="ghost"

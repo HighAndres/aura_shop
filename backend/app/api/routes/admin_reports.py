@@ -72,8 +72,12 @@ def reporte_ventas(
     desde = date.today() - timedelta(days=dias)
     hasta = date.today()
 
-    # Quien no puede ver todos los pedidos solo se ve a sí mismo en el reporte.
-    ve_todo = has_permission(current_user, "pedidos.leer")
+    # Quien no puede ver todos los pedidos solo se ve a sí mismo en el
+    # reporte, salvo que tenga el permiso explícito de cifras globales
+    # (p. ej. el comercial, que no ve pedidos pero sí reportes completos).
+    ve_todo = has_permission(current_user, "pedidos.leer") or has_permission(
+        current_user, "reportes.ver_todo"
+    )
     vendedor_id = None if ve_todo else current_user.id
 
     conds = _filtros_periodo(desde, vendedor_id)

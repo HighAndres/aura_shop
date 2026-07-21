@@ -16,7 +16,7 @@ from app.schemas.user import UserMeRead, UserProfileUpdate, UserRead
 
 router = APIRouter(prefix="/users", tags=["users"])
 
-STAFF_ROLES = {"superadmin", "administrador", "vendedor"}
+STAFF_ROLES = {"superadmin", "administrador", "vendedor", "comercial"}
 
 
 def _me_con_permisos(user: Usuario) -> UserMeRead:

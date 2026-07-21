@@ -37,6 +37,7 @@ export const PERM = {
   USUARIOS_LEER: "usuarios.leer",
   ROLES_GESTIONAR: "roles.gestionar",
   REPORTES_LEER: "reportes.leer",
+  REPORTES_VER_TODO: "reportes.ver_todo",
   BITACORA_LEER: "bitacora.leer",
 } as const;
 

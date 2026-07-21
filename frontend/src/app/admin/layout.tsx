@@ -24,7 +24,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { PERM, canAny, type Permiso } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
-const STAFF_ROLES = ["superadmin", "administrador", "vendedor"];
+const STAFF_ROLES = ["superadmin", "administrador", "vendedor", "comercial"];
 
 interface NavItem {
   href: string;
@@ -42,12 +42,13 @@ const NAV_ITEMS: NavItem[] = [
     permisos: [],
   },
   {
-    // Se pide "editar" y no "leer": el vendedor necesita leer el catálogo para
-    // buscar productos al levantar un pedido, pero no gestionarlo.
+    // Se pide "crear/editar" y no "leer": el vendedor necesita leer el
+    // catálogo para buscar productos al levantar un pedido, pero no
+    // gestionarlo. El comercial entra con "crear" (altas en borrador).
     href: "/admin/productos",
     label: "Productos",
     icon: Package,
-    permisos: [PERM.PRODUCTOS_EDITAR],
+    permisos: [PERM.PRODUCTOS_CREAR, PERM.PRODUCTOS_EDITAR],
   },
   {
     href: "/admin/paquetes",
