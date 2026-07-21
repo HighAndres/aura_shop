@@ -55,3 +55,20 @@ export function canAny(user: ConPermisos, permisos: readonly Permiso[]): boolean
   if (permisos.length === 0) return true;
   return permisos.some((p) => can(user, p));
 }
+
+/**
+ * Roles con acceso al panel administrativo. Espejo de STAFF_ROLES en
+ * backend/app/api/routes/users.py. Fuente única: al agregar un rol de
+ * staff, actualizar aquí y ahí, no en cada componente.
+ */
+export const STAFF_ROLES = [
+  "superadmin",
+  "administrador",
+  "vendedor",
+  "comercial",
+] as const;
+
+/** ¿El usuario tiene acceso al panel? */
+export function isStaff(user: Pick<Usuario, "roles"> | null | undefined): boolean {
+  return user?.roles?.some((r) => STAFF_ROLES.includes(r as never)) ?? false;
+}
