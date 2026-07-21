@@ -215,7 +215,6 @@ export default function AdminReportesPage() {
   const [loadingVentas, setLoadingVentas] = useState(true);
   const [loadingInv, setLoadingInv] = useState(true);
 
-  const isSuperadmin = user?.roles.includes("superadmin");
   // Gating por permiso (no por rol): el comercial ve ventas globales pero
   // no inventario. "Ver todo" es tener pedidos.leer (admin) o el permiso
   // explícito reportes.ver_todo (comercial); mismo criterio que el backend.
