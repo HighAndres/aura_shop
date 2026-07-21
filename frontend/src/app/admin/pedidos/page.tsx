@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState, useCallback } from "react";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import {
   ChevronLeft,
@@ -751,14 +752,18 @@ function PedidosContent() {
                       Precio público
                     </span>
                   </div>
-                  {prodResults.map((prod) => (
+                  {prodResults.map((prod) => {
+                    const principal =
+                      prod.imagenes.find((im) => im.es_principal) ??
+                      prod.imagenes[0];
+                    return (
                     <div key={prod.id}>
                       {prod.variantes
                         .filter((v) => v.activo && parseFloat(v.precio) > 0)
                         .map((v) => (
                           <div
                             key={v.id}
-                            className="flex items-center justify-between px-3 py-2 hover:bg-muted/50 cursor-pointer border-b last:border-b-0"
+                            className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-muted/50 cursor-pointer border-b last:border-b-0"
                             onClick={() => {
                               agregarVariante(prod, v);
                               if (prodSearch.trim()) {
@@ -767,8 +772,19 @@ function PedidosContent() {
                               }
                             }}
                           >
-                            <div>
-                              <p className="text-sm font-medium">
+                            <div className="relative size-10 shrink-0 overflow-hidden rounded-md bg-muted">
+                              {principal && (
+                                <Image
+                                  src={principal.url}
+                                  alt={prod.nombre}
+                                  fill
+                                  sizes="40px"
+                                  className="object-cover"
+                                />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium">
                                 {prod.nombre}
                                 {v.nombre && (
                                   <span className="text-muted-foreground">
@@ -798,7 +814,8 @@ function PedidosContent() {
                           </div>
                         ))}
                     </div>
-                  ))}
+                    );
+                  })}
                   {!prodSearch.trim() && prodResults.length < prodTotal && (
                     <button
                       className="w-full py-2 text-center text-xs text-primary hover:bg-muted/50 disabled:opacity-50"
