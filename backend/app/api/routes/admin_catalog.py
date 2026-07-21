@@ -40,8 +40,14 @@ def _user_can_set_prices(user: Usuario) -> bool:
     return has_permission(user, "productos.editar")
 
 
-def _serialize_producto(p: Producto) -> ProductoAdminRead:
-    return ProductoAdminRead.model_validate(p)
+def _serialize_producto(p: Producto, *, user: Usuario) -> ProductoAdminRead:
+    data = ProductoAdminRead.model_validate(p)
+    # El costo de proveedor no es para todos los ojos: sin el permiso, el
+    # campo viaja en null aunque la fila lo tenga.
+    if not has_permission(user, "productos.ver_costo"):
+        for v in data.variantes:
+            v.costo = None
+    return data
 
 
 # ── Marcas ──────────────────────────────────────────────────────────────
@@ -198,10 +204,10 @@ def editar_categoria(
     "/productos",
     response_model=ProductoAdminPage,
     summary="Listar productos (admin, incluye inactivos)",
-    dependencies=[Depends(require_permissions("productos.leer"))],
 )
 def listar_productos_admin(
     db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_permissions("productos.leer")),
     q: str | None = Query(default=None),
     activo: bool | None = Query(default=None),
     marca_id: str | None = Query(default=None),
@@ -243,7 +249,7 @@ def listar_productos_admin(
     ).all()
 
     return ProductoAdminPage(
-        items=[_serialize_producto(p) for p in items],
+        items=[_serialize_producto(p, user=current_user) for p in items],
         total=total, limit=limit, offset=offset,
     )
 
@@ -252,16 +258,16 @@ def listar_productos_admin(
     "/productos/{producto_id}",
     response_model=ProductoAdminRead,
     summary="Detalle de producto por ID (admin)",
-    dependencies=[Depends(require_permissions("productos.leer"))],
 )
 def detalle_producto_admin(
     producto_id: str,
     db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_permissions("productos.leer")),
 ) -> ProductoAdminRead:
     producto = db.get(Producto, producto_id)
     if producto is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Producto no encontrado")
-    return _serialize_producto(producto)
+    return _serialize_producto(producto, user=current_user)
 
 
 @router.post(
@@ -301,6 +307,7 @@ def crear_producto(
         if not can_price:
             v_data["precio"] = 0
             v_data["precio_comparativo"] = None
+            v_data["costo"] = None
         producto.variantes.append(Variante(**v_data))
 
     for img in body.imagenes:
@@ -316,7 +323,7 @@ def crear_producto(
         entidad="producto", entidad_id=str(producto.id),
         cambios=body.model_dump(mode="json"), request=request,
     )
-    return _serialize_producto(producto)
+    return _serialize_producto(producto, user=current_user)
 
 
 @router.put(
@@ -362,12 +369,14 @@ def editar_producto(
                 if can_price:
                     existing.precio = v_in.precio
                     existing.precio_comparativo = v_in.precio_comparativo
+                    existing.costo = v_in.costo
                     existing.activo = v_in.activo
             else:
                 v_data = v_in.model_dump()
                 if not can_price:
                     v_data["precio"] = 0
                     v_data["precio_comparativo"] = None
+                    v_data["costo"] = None
                 if db.scalar(select(Variante).where(Variante.sku == v_in.sku)):
                     raise HTTPException(
                         status.HTTP_409_CONFLICT, f"SKU ya existe: {v_in.sku}"
@@ -389,7 +398,7 @@ def editar_producto(
         entidad="producto", entidad_id=str(producto.id),
         cambios=body.model_dump(exclude_unset=True, mode="json"), request=request,
     )
-    return _serialize_producto(producto)
+    return _serialize_producto(producto, user=current_user)
 
 
 @router.patch(
@@ -427,7 +436,7 @@ def toggle_producto(
         entidad="producto", entidad_id=str(producto.id),
         cambios={"activo": producto.activo}, request=request,
     )
-    return _serialize_producto(producto)
+    return _serialize_producto(producto, user=current_user)
 
 
 @router.delete(

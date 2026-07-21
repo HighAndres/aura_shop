@@ -22,6 +22,7 @@ PERMISOS: dict[str, str] = {
     "perfil.editar_propio": "Editar el perfil propio",
     "productos.leer": "Ver catálogo",
     "productos.ver_precio": "Ver los precios del catálogo",
+    "productos.ver_costo": "Ver el costo de proveedor de los productos",
     "productos.crear": "Crear productos",
     "productos.editar": "Editar productos",
     "productos.eliminar": "Eliminar productos",
@@ -68,7 +69,7 @@ ROLES: dict[str, dict] = {
         "permisos": [
             "usuarios.leer",
             "perfil.editar_propio",
-            "productos.leer", "productos.ver_precio",
+            "productos.leer", "productos.ver_precio", "productos.ver_costo",
             "productos.crear", "productos.editar",
             "paquetes.gestionar",
             "inventario.leer", "inventario.ajustar",

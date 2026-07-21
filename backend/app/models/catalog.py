@@ -155,6 +155,9 @@ class Variante(UUIDPKMixin, TimestampMixin, OdooSyncMixin, Base):
         Numeric(12, 2), default=0, nullable=False
     )
     precio_comparativo: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
+    # Costo de compra al proveedor. Solo se expone por la API a quien tiene
+    # "productos.ver_costo"; nunca sale por el catálogo público.
+    costo: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
 
     peso_gramos: Mapped[int | None] = mapped_column(Integer)
     activo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
