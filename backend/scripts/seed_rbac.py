@@ -41,6 +41,7 @@ PERMISOS: dict[str, str] = {
     "pedidos.cancelar": "Cancelar pedidos",
     "pedidos.reasignar": "Reasignar pedidos a otro usuario",
     "reportes.leer": "Ver reportes",
+    "reportes.ver_todo": "Ver reportes con cifras globales (no solo las propias)",
     "bitacora.leer": "Ver la bitácora de auditoría",
     "configuracion.gestionar": "Gestionar la configuración del sistema",
 }
@@ -86,6 +87,20 @@ ROLES: dict[str, dict] = {
             "productos.leer", "productos.ver_precio",
             "pedidos.leer_asignados", "pedidos.crear",
             "reportes.leer",
+        ],
+    },
+    "comercial": {
+        "descripcion": (
+            "Alimenta el catálogo: alta de productos (en borrador, los publica "
+            "un admin), marcas y categorías, y todos los reportes. "
+            "Sin inventario ni pedidos"
+        ),
+        "permisos": [
+            "perfil.editar_propio",
+            "productos.leer", "productos.ver_precio", "productos.ver_costo",
+            "productos.crear",
+            "marcas.gestionar", "categorias.gestionar",
+            "reportes.leer", "reportes.ver_todo",
         ],
     },
     "cliente": {
@@ -154,7 +169,7 @@ def seed() -> None:
         db.commit()
         print(
             f"Seed OK: {len(existentes)} permisos, {len(roles_db)} roles "
-            "(superadmin, administrador, vendedor, cliente, invitado)."
+            f"({', '.join(roles_db)})."
         )
         if retirados:
             print(f"Permisos obsoletos retirados: {retirados}")

@@ -35,6 +35,7 @@ function rolLabel(roles: string[]): string {
   if (roles.includes("superadmin")) return "Superadmin";
   if (roles.includes("administrador")) return "Administrador";
   if (roles.includes("vendedor")) return "Vendedor";
+  if (roles.includes("comercial")) return "Comercial";
   return "Staff";
 }
 
@@ -57,7 +58,8 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
 
   const verInventario = can(user, PERM.INVENTARIO_LEER);
-  const gestionarProductos = can(user, PERM.PRODUCTOS_EDITAR);
+  const gestionarProductos =
+    can(user, PERM.PRODUCTOS_EDITAR) || can(user, PERM.PRODUCTOS_CREAR);
   const verReportes = can(user, PERM.REPORTES_LEER);
   const verUsuarios = can(user, PERM.USUARIOS_LEER);
   const gestionarRoles = can(user, PERM.ROLES_GESTIONAR);
