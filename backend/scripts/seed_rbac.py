@@ -92,14 +92,14 @@ ROLES: dict[str, dict] = {
     "comercial": {
         "descripcion": (
             "Alimenta el catálogo: alta de productos (en borrador, los publica "
-            "un admin), marcas y categorías, y todos los reportes. "
+            "un admin), marcas, categorías y paquetes, y todos los reportes. "
             "Sin inventario ni pedidos"
         ),
         "permisos": [
             "perfil.editar_propio",
             "productos.leer", "productos.ver_precio", "productos.ver_costo",
             "productos.crear",
-            "marcas.gestionar", "categorias.gestionar",
+            "marcas.gestionar", "categorias.gestionar", "paquetes.gestionar",
             "reportes.leer", "reportes.ver_todo",
         ],
     },
