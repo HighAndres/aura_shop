@@ -8,6 +8,7 @@ import { Package, LogOut, BadgeCheck, ShieldAlert, Settings } from "lucide-react
 import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { isStaff } from "@/lib/permissions";
 
 export default function CuentaPage() {
   const { user, loading, logout } = useAuth();
@@ -47,7 +48,7 @@ export default function CuentaPage() {
         </div>
       </div>
 
-      {user.roles.some((r) => ["superadmin", "administrador", "vendedor"].includes(r)) && (
+      {isStaff(user) && (
         <Button asChild variant="default" className="w-full justify-start gap-2">
           <Link href="/admin">
             <Settings className="size-4" /> Panel de administración

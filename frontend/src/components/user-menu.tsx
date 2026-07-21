@@ -5,8 +5,7 @@ import { CircleUserRound, Settings } from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
-
-const STAFF_ROLES = ["superadmin", "administrador", "vendedor"];
+import { isStaff } from "@/lib/permissions";
 
 export function UserMenu() {
   const { user, loading } = useAuth();
@@ -24,11 +23,10 @@ export function UserMenu() {
   }
 
   const nombre = user.nombre_completo?.split(" ")[0] ?? user.email.split("@")[0];
-  const isStaff = user.roles.some((r) => STAFF_ROLES.includes(r));
 
   return (
     <>
-      {isStaff && (
+      {isStaff(user) && (
         <Button asChild variant="ghost" size="sm" className="gap-1.5 font-medium">
           <Link href="/admin">
             <Settings className="size-4" />
