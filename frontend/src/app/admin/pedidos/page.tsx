@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState, useCallback } from "react";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import {
   ChevronLeft,
@@ -117,6 +118,7 @@ function PedidosContent() {
   const [lineas, setLineas] = useState<LineaPedido[]>([]);
   const [prodSearch, setProdSearch] = useState("");
   const [prodResults, setProdResults] = useState<ProductoAdmin[]>([]);
+  const [prodTotal, setProdTotal] = useState(0);
   const [prodLoading, setProdLoading] = useState(false);
   const [clienteData, setClienteData] = useState({
     email: "",
@@ -133,6 +135,7 @@ function PedidosContent() {
 
   const canAssign = can(user, PERM.PEDIDOS_REASIGNAR);
   const canCreate = can(user, PERM.PEDIDOS_CREAR);
+  const canVerCosto = can(user, PERM.PRODUCTOS_VER_COSTO);
 
   const fetchPedidos = useCallback(async () => {
     setLoading(true);
@@ -171,10 +174,33 @@ function PedidosContent() {
       .catch(() => setStaffUsers([]));
   }, [canAssign]);
 
-  /* ── Buscar productos ── */
+  /* ── Buscar productos / catálogo ── */
+  // Sin texto de búsqueda se muestra el catálogo completo paginado; con
+  // texto, el buscador de siempre (nombre, SKU o código de barras).
+  const cargarCatalogo = useCallback(async (offset: number) => {
+    setProdLoading(true);
+    try {
+      const res = await adminFetch<ProductoAdminPage>(
+        `/admin/catalog/productos?activo=true&limit=25&offset=${offset}`,
+      );
+      setProdResults((prev) =>
+        offset === 0 ? res.items : [...prev, ...res.items],
+      );
+      setProdTotal(res.total);
+    } catch {
+      if (offset === 0) setProdResults([]);
+    } finally {
+      setProdLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showCrear) void cargarCatalogo(0);
+  }, [showCrear, cargarCatalogo]);
+
   async function buscarProductos(q: string) {
     if (!q.trim()) {
-      setProdResults([]);
+      void cargarCatalogo(0);
       return;
     }
     setProdLoading(true);
@@ -183,6 +209,7 @@ function PedidosContent() {
         `/admin/catalog/productos?q=${encodeURIComponent(q)}&activo=true&limit=10`,
       );
       setProdResults(res.items);
+      setProdTotal(res.total);
     } catch {
       setProdResults([]);
     } finally {
@@ -706,29 +733,58 @@ function PedidosContent() {
                 />
               </div>
 
-              {prodLoading && (
+              {prodLoading && prodResults.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-2">
-                  Buscando...
+                  Cargando catálogo...
                 </p>
               )}
               {prodResults.length > 0 && (
                 <div className="rounded-md border max-h-60 overflow-y-auto">
-                  {prodResults.map((prod) => (
+                  <div className="sticky top-0 flex items-center justify-between border-b bg-muted/80 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur">
+                    <span>
+                      {prodSearch.trim() ? "Resultados" : "Catálogo"} ·{" "}
+                      {prodTotal} producto{prodTotal === 1 ? "" : "s"}
+                    </span>
+                    <span>
+                      {canVerCosto && (
+                        <span className="mr-3">Costo</span>
+                      )}
+                      Precio público
+                    </span>
+                  </div>
+                  {prodResults.map((prod) => {
+                    const principal =
+                      prod.imagenes.find((im) => im.es_principal) ??
+                      prod.imagenes[0];
+                    return (
                     <div key={prod.id}>
                       {prod.variantes
                         .filter((v) => v.activo && parseFloat(v.precio) > 0)
                         .map((v) => (
                           <div
                             key={v.id}
-                            className="flex items-center justify-between px-3 py-2 hover:bg-muted/50 cursor-pointer border-b last:border-b-0"
+                            className="flex items-center justify-between gap-3 px-3 py-2 hover:bg-muted/50 cursor-pointer border-b last:border-b-0"
                             onClick={() => {
                               agregarVariante(prod, v);
-                              setProdSearch("");
-                              setProdResults([]);
+                              if (prodSearch.trim()) {
+                                setProdSearch("");
+                                void cargarCatalogo(0);
+                              }
                             }}
                           >
-                            <div>
-                              <p className="text-sm font-medium">
+                            <div className="relative size-10 shrink-0 overflow-hidden rounded-md bg-muted">
+                              {principal && (
+                                <Image
+                                  src={principal.url}
+                                  alt={prod.nombre}
+                                  fill
+                                  sizes="40px"
+                                  className="object-cover"
+                                />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium">
                                 {prod.nombre}
                                 {v.nombre && (
                                   <span className="text-muted-foreground">
@@ -742,6 +798,14 @@ function PedidosContent() {
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
+                              {canVerCosto && (
+                                <span
+                                  className="text-xs font-mono text-muted-foreground"
+                                  title="Costo proveedor"
+                                >
+                                  {v.costo ? formatMXN(v.costo) : "—"}
+                                </span>
+                              )}
                               <span className="text-sm font-mono">
                                 {formatMXN(v.precio)}
                               </span>
@@ -750,7 +814,19 @@ function PedidosContent() {
                           </div>
                         ))}
                     </div>
-                  ))}
+                    );
+                  })}
+                  {!prodSearch.trim() && prodResults.length < prodTotal && (
+                    <button
+                      className="w-full py-2 text-center text-xs text-primary hover:bg-muted/50 disabled:opacity-50"
+                      disabled={prodLoading}
+                      onClick={() => cargarCatalogo(prodResults.length)}
+                    >
+                      {prodLoading
+                        ? "Cargando..."
+                        : `Cargar más (${prodResults.length} de ${prodTotal})`}
+                    </button>
+                  )}
                 </div>
               )}
 

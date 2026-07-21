@@ -60,6 +60,7 @@ interface VarianteForm {
   nombre: string;
   precio: string;
   precio_comparativo: string;
+  costo: string;
   activo: boolean;
 }
 
@@ -75,6 +76,7 @@ const emptyVariante = (): VarianteForm => ({
   nombre: "",
   precio: "",
   precio_comparativo: "",
+  costo: "",
   activo: true,
 });
 
@@ -202,6 +204,7 @@ export default function AdminProductosPage() {
         nombre: v.nombre ?? "",
         precio: v.precio,
         precio_comparativo: v.precio_comparativo ?? "",
+        costo: v.costo ?? "",
         activo: v.activo,
       })),
     );
@@ -248,6 +251,7 @@ export default function AdminProductosPage() {
           nombre: v.nombre || null,
           precio: v.precio || "0",
           precio_comparativo: v.precio_comparativo || null,
+          costo: v.costo || null,
           activo: v.activo,
         })),
         imagenes: imagenes.map((img) => ({
@@ -778,6 +782,22 @@ export default function AdminProductosPage() {
                               "precio_comparativo",
                               e.target.value,
                             )
+                          }
+                          disabled={!canPrice}
+                          className={!canPrice ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label className={!canPrice ? "text-muted-foreground" : ""}>
+                          Costo proveedor {!canPrice && <Lock className="inline h-3 w-3 ml-1" />}
+                        </Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={v.costo}
+                          onChange={(e) =>
+                            updateVariante(idx, "costo", e.target.value)
                           }
                           disabled={!canPrice}
                           className={!canPrice ? "bg-muted" : ""}

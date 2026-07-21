@@ -73,6 +73,7 @@ class VarianteIn(BaseModel):
     nombre: str | None = Field(default=None, max_length=255)
     precio: Decimal = Field(ge=0)
     precio_comparativo: Decimal | None = None
+    costo: Decimal | None = Field(default=None, ge=0)
     activo: bool = True
 
 
@@ -84,6 +85,8 @@ class VarianteAdminRead(BaseModel):
     nombre: str | None = None
     precio: Decimal
     precio_comparativo: Decimal | None = None
+    # Se anula en la respuesta si quien consulta no tiene "productos.ver_costo".
+    costo: Decimal | None = None
     activo: bool
 
 

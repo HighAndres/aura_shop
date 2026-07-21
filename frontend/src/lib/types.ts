@@ -274,6 +274,8 @@ export interface VarianteAdmin {
   nombre: string | null;
   precio: string;
   precio_comparativo: string | null;
+  // null también cuando quien consulta no tiene "productos.ver_costo".
+  costo: string | null;
   activo: boolean;
 }
 

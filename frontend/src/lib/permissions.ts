@@ -13,6 +13,7 @@ export const PERM = {
 
   PRODUCTOS_LEER: "productos.leer",
   PRODUCTOS_VER_PRECIO: "productos.ver_precio",
+  PRODUCTOS_VER_COSTO: "productos.ver_costo",
   PRODUCTOS_CREAR: "productos.crear",
   PRODUCTOS_EDITAR: "productos.editar",
   PRODUCTOS_ELIMINAR: "productos.eliminar",
